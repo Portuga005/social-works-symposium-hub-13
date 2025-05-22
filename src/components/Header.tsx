@@ -4,17 +4,15 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { LoginForm } from './LoginForm';
 import { RegisterForm } from './RegisterForm';
-import { Menu, X, User, LogOut, FileText, Settings } from 'lucide-react';
+import { Menu, X, Settings, LogOut } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { UserSettingsModal } from './UserSettingsModal';
-import { SubmitWorkModal } from './SubmitWorkModal';
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [loginOpen, setLoginOpen] = useState(false);
   const [registerOpen, setRegisterOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [submitWorkOpen, setSubmitWorkOpen] = useState(false);
   const { isAuthenticated, logout } = useAuth();
 
   return (
@@ -55,23 +53,6 @@ const Header = () => {
           <div className="hidden md:flex items-center space-x-3">
             {isAuthenticated ? (
               <>
-                <Dialog open={submitWorkOpen} onOpenChange={setSubmitWorkOpen}>
-                  <DialogTrigger asChild>
-                    <Button 
-                      className="flex items-center space-x-2 bg-social-orange hover:bg-social-orange/90"
-                    >
-                      <FileText className="w-4 h-4" />
-                      <span>Submeter Trabalho</span>
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="sm:max-w-md">
-                    <DialogHeader>
-                      <DialogTitle>Submeter Trabalho</DialogTitle>
-                    </DialogHeader>
-                    <SubmitWorkModal onClose={() => setSubmitWorkOpen(false)} />
-                  </DialogContent>
-                </Dialog>
-
                 <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
                   <DialogTrigger asChild>
                     <Button 
@@ -164,23 +145,6 @@ const Header = () => {
               <div className="flex flex-col space-y-2 pt-4">
                 {isAuthenticated ? (
                   <>
-                    <Dialog open={submitWorkOpen} onOpenChange={setSubmitWorkOpen}>
-                      <DialogTrigger asChild>
-                        <Button 
-                          className="flex items-center justify-start space-x-2 bg-social-orange hover:bg-social-orange/90"
-                        >
-                          <FileText className="w-4 h-4" />
-                          <span>Submeter Trabalho</span>
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent className="sm:max-w-md">
-                        <DialogHeader>
-                          <DialogTitle>Submeter Trabalho</DialogTitle>
-                        </DialogHeader>
-                        <SubmitWorkModal onClose={() => setSubmitWorkOpen(false)} />
-                      </DialogContent>
-                    </Dialog>
-
                     <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
                       <DialogTrigger asChild>
                         <Button 

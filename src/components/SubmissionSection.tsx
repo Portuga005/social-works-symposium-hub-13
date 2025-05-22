@@ -116,12 +116,6 @@ const SubmissionSection = () => {
             </div>
           </div>
         </div>
-
-        <div className="text-center">
-          <Button size="lg" className="bg-social-orange hover:bg-social-orange/90 px-8 py-4 text-lg">
-            Submeter Trabalho
-          </Button>
-        </div>
       </div>
     </section>
   );
