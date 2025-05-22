@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface LoginFormProps {
   onClose: () => void;
@@ -13,28 +13,17 @@ export const LoginForm = ({ onClose }: LoginFormProps) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const { toast } = useToast();
+  const { login } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-      // Simular login
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      toast({
-        title: "Login realizado com sucesso!",
-        description: "Você será redirecionado para seu painel.",
-      });
-      
+      await login(email, password);
       onClose();
     } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "Erro no login",
-        description: "Verifique suas credenciais e tente novamente.",
-      });
+      console.error(error);
     } finally {
       setLoading(false);
     }
