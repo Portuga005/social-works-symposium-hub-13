@@ -6,7 +6,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
 import { z } from 'zod';
-import storageService from '@/services/storageService';
+import storageService, { User } from '@/services/storageService';
 import { toast } from 'sonner';
 
 const registerSchema = z.object({
@@ -24,7 +24,7 @@ const registerSchema = z.object({
 
 type RegisterFormData = z.infer<typeof registerSchema>;
 
-export function RegisterForm() {
+export function RegisterForm({ onClose }: { onClose: () => void }) {
   const [formData, setFormData] = useState<RegisterFormData>({
     nome: '',
     email: '',
@@ -82,7 +82,7 @@ export function RegisterForm() {
       }
       
       // Create new user
-      const newUser = {
+      const newUser: User = {
         id: `user-${Date.now()}`,
         nome: formData.nome,
         email: formData.email,
@@ -96,6 +96,7 @@ export function RegisterForm() {
       storageService.saveUser(newUser);
       
       toast.success('Cadastro realizado com sucesso! Você pode fazer login agora.');
+      onClose();
     } catch (error) {
       console.error(error);
       toast.error('Erro ao criar conta. Tente novamente.');
@@ -115,9 +116,6 @@ export function RegisterForm() {
       
       // Register user
       handleRegister(validatedData);
-      
-      // Redirect to login
-      navigate('/login');
     } catch (error) {
       if (error instanceof z.ZodError) {
         // Convert Zod errors to a more usable format

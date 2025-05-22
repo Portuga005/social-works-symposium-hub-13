@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { LoginForm } from './LoginForm';
 import { RegisterForm } from './RegisterForm';
-import { Menu, X, User, LogOut, FileText, Settings } from 'lucide-react';
+import { Menu, X, LogOut, FileText, Settings } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { UserSettingsModal } from './UserSettingsModal';
 import { SubmitWorkModal } from './SubmitWorkModal';
@@ -42,9 +42,6 @@ const Header = () => {
             </a>
             <a href="#programacao" className="text-gray-700 hover:text-unespar-blue transition-colors">
               Programação
-            </a>
-            <a href="#submissao" className="text-gray-700 hover:text-unespar-blue transition-colors">
-              Submissão
             </a>
             <a href="#contato" className="text-gray-700 hover:text-unespar-blue transition-colors">
               Contato
@@ -153,9 +150,6 @@ const Header = () => {
               </a>
               <a href="#programacao" className="text-gray-700 hover:text-unespar-blue transition-colors">
                 Programação
-              </a>
-              <a href="#submissao" className="text-gray-700 hover:text-unespar-blue transition-colors">
-                Submissão
               </a>
               <a href="#contato" className="text-gray-700 hover:text-unespar-blue transition-colors">
                 Contato

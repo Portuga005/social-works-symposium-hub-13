@@ -43,21 +43,32 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 1000));
       
-      // Check if user exists (in real app, this would validate password too)
-      const users = storageService.getUsers();
-      const foundUser = users.find(u => u.email.toLowerCase() === email.toLowerCase());
-      
-      if (!foundUser) {
-        throw new Error('Usuário não encontrado');
+      // For simplicity, we'll hardcode admin and professor logins
+      // Admin login
+      if (email === 'admin@unespar.edu.br' && password === 'admin123') {
+        const adminUser = storageService.getUsers().find(u => u.email === email);
+        
+        if (adminUser) {
+          setUser(adminUser);
+          storageService.updateCurrentUser(adminUser);
+          toast.success('Login administrativo realizado com sucesso!');
+          return;
+        }
       }
       
-      // In a real app, you would verify the password here
+      // Professor login
+      if (email === 'profa@unespar.edu.br' && password === 'prof123') {
+        const professorUser = storageService.getUsers().find(u => u.email === email);
+        
+        if (professorUser) {
+          setUser(professorUser);
+          storageService.updateCurrentUser(professorUser);
+          toast.success('Login de professor realizado com sucesso!');
+          return;
+        }
+      }
       
-      // Set user as logged in
-      setUser(foundUser);
-      storageService.updateCurrentUser(foundUser);
-      
-      toast.success('Login realizado com sucesso!');
+      throw new Error('Credenciais inválidas');
     } catch (error) {
       toast.error('Erro ao fazer login. Verifique suas credenciais.');
       console.error(error);

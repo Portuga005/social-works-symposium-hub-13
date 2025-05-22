@@ -3,8 +3,7 @@
 export const STORAGE_KEYS = {
   USERS: 'simpUnespar:users',
   CURRENT_USER: 'simpUnespar:user',
-  SUBMISSIONS: 'simpUnespar:submissions',
-  PROFESSORS: 'simpUnespar:professors'
+  SUBMISSIONS: 'simpUnespar:submissions'
 };
 
 // Interface types
@@ -18,19 +17,7 @@ export interface Submission {
   resultado?: 'Aprovado' | 'Reprovado' | 'Em análise';
   feedback?: string;
   professorId?: string;
-}
-
-export interface Professor {
-  id: string;
-  nome: string;
-  email: string;
-  trabalhosAvaliados: number;
-}
-
-export interface Admin {
-  id: string;
-  nome: string;
-  email: string;
+  dataAvaliacao?: string; // Added dataAvaliacao field
 }
 
 export interface User {
@@ -81,18 +68,6 @@ export const updateCurrentUser = (user: User | null): void => {
     saveUser(user);
   }
   setItem(STORAGE_KEYS.CURRENT_USER, user);
-};
-
-export const deleteUser = (userId: string): void => {
-  const users = getUsers();
-  const filteredUsers = users.filter(user => user.id !== userId);
-  setItem(STORAGE_KEYS.USERS, filteredUsers);
-  
-  // If current user is deleted, log out
-  const currentUser = getCurrentUser();
-  if (currentUser && currentUser.id === userId) {
-    updateCurrentUser(null);
-  }
 };
 
 // Submission functions
@@ -158,34 +133,6 @@ export const saveSubmission = (submission: Submission): void => {
   }
 };
 
-export const deleteSubmission = (submissionId: string): void => {
-  const submissions = getSubmissions();
-  const submission = submissions.find(s => s.id === submissionId);
-  
-  if (submission) {
-    // Update user status
-    const user = getUsers().find(u => u.id === submission.userId);
-    if (user) {
-      saveUser({
-        ...user,
-        trabalhosSubmetidos: false
-      });
-      
-      // Update current user if it's the same
-      const currentUser = getCurrentUser();
-      if (currentUser && currentUser.id === user.id) {
-        updateCurrentUser({
-          ...currentUser,
-          trabalhosSubmetidos: false
-        });
-      }
-    }
-  }
-  
-  const filteredSubmissions = submissions.filter(s => s.id !== submissionId);
-  setItem(STORAGE_KEYS.SUBMISSIONS, filteredSubmissions);
-};
-
 // Professor functions
 export const getProfessors = (): User[] => {
   return getUsers().filter(user => user.role === 'professor');
@@ -193,34 +140,32 @@ export const getProfessors = (): User[] => {
 
 // Initialize storage with default data
 export const initializeStorage = (): void => {
-  const users = getUsers();
+  // Clear existing data to ensure only default data is present
+  localStorage.removeItem(STORAGE_KEYS.USERS);
+  localStorage.removeItem(STORAGE_KEYS.CURRENT_USER);
+  localStorage.removeItem(STORAGE_KEYS.SUBMISSIONS);
   
-  // Only initialize if no users exist
-  if (users.length === 0) {
-    // Add default admin
-    saveUser({
-      id: '1',
-      nome: 'Admin Principal',
-      email: 'admin@unespar.edu.br',
-      cpf: '111.111.111-11',
-      instituicao: 'UNESPAR',
-      trabalhosSubmetidos: false,
-      role: 'admin'
-    });
-    
-    // Add default professors
-    ['A', 'B', 'C'].forEach((letter, index) => {
-      saveUser({
-        id: `prof-${index + 1}`,
-        nome: `Professor ${letter}`,
-        email: `prof${letter.toLowerCase()}@unespar.edu.br`,
-        cpf: `222.222.222-${index + 1}${index + 1}`,
-        instituicao: 'UNESPAR',
-        trabalhosSubmetidos: false,
-        role: 'professor'
-      });
-    });
-  }
+  // Add default admin
+  saveUser({
+    id: 'admin-1',
+    nome: 'Admin Principal',
+    email: 'admin@unespar.edu.br',
+    cpf: '111.111.111-11',
+    instituicao: 'UNESPAR',
+    trabalhosSubmetidos: false,
+    role: 'admin'
+  });
+  
+  // Add default professor
+  saveUser({
+    id: 'prof-1',
+    nome: 'Professor A',
+    email: 'profa@unespar.edu.br',
+    cpf: '222.222.222-11',
+    instituicao: 'UNESPAR',
+    trabalhosSubmetidos: false,
+    role: 'professor'
+  });
 };
 
 export default {
@@ -228,7 +173,6 @@ export default {
   getCurrentUser,
   saveUser,
   updateCurrentUser,
-  deleteUser,
   getSubmissions,
   getSubmissionById,
   getSubmissionsByUser,
@@ -236,7 +180,6 @@ export default {
   getPendingSubmissions,
   getEvaluatedSubmissions,
   saveSubmission,
-  deleteSubmission,
   getProfessors,
   initializeStorage
 };
