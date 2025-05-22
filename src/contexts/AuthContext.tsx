@@ -1,15 +1,7 @@
 
 import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { toast } from 'sonner';
-
-type User = {
-  id: string;
-  nome: string;
-  email: string;
-  cpf: string;
-  instituicao: string;
-  trabalhosSubmetidos: boolean;
-};
+import storageService, { User } from '@/services/storageService';
 
 type AuthContextType = {
   user: User | null;
@@ -31,11 +23,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Verificar se o usuário está armazenado no localStorage
-    const storedUser = localStorage.getItem('@simpUnespar:user');
+    // Initialize storage with default data
+    storageService.initializeStorage();
+    
+    // Check if user is already logged in
+    const storedUser = storageService.getCurrentUser();
     
     if (storedUser) {
-      setUser(JSON.parse(storedUser));
+      setUser(storedUser);
     }
     
     setLoading(false);
@@ -45,21 +40,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setLoading(true);
     
     try {
-      // Simulação de login - em produção isso seria uma chamada API
+      // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 1000));
       
-      // Usuário mockado para demonstração
-      const mockUser: User = {
-        id: '1',
-        nome: 'Usuário Teste',
-        email: email,
-        cpf: '123.456.789-00',
-        instituicao: 'UNESPAR',
-        trabalhosSubmetidos: false
-      };
+      // Check if user exists (in real app, this would validate password too)
+      const users = storageService.getUsers();
+      const foundUser = users.find(u => u.email.toLowerCase() === email.toLowerCase());
       
-      setUser(mockUser);
-      localStorage.setItem('@simpUnespar:user', JSON.stringify(mockUser));
+      if (!foundUser) {
+        throw new Error('Usuário não encontrado');
+      }
+      
+      // In a real app, you would verify the password here
+      
+      // Set user as logged in
+      setUser(foundUser);
+      storageService.updateCurrentUser(foundUser);
+      
       toast.success('Login realizado com sucesso!');
     } catch (error) {
       toast.error('Erro ao fazer login. Verifique suas credenciais.');
@@ -71,7 +68,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const logout = () => {
     setUser(null);
-    localStorage.removeItem('@simpUnespar:user');
+    storageService.updateCurrentUser(null);
     toast.info('Logout realizado com sucesso');
   };
 
@@ -79,7 +76,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (user) {
       const updatedUser = { ...user, ...data };
       setUser(updatedUser);
-      localStorage.setItem('@simpUnespar:user', JSON.stringify(updatedUser));
+      storageService.updateCurrentUser(updatedUser);
       toast.success('Informações atualizadas com sucesso!');
     }
   };

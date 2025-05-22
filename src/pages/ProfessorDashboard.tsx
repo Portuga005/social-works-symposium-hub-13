@@ -1,73 +1,81 @@
-
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { FileText, Download, CheckCircle, XCircle, Clock } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
+import storageService, { Submission } from '@/services/storageService';
+import { useNavigate } from 'react-router-dom';
 
 const ProfessorDashboard = () => {
   const [activeTab, setActiveTab] = useState('pendentes');
   const [feedback, setFeedback] = useState('');
+  const [trabalhosPendentes, setTrabalhosPendentes] = useState<Submission[]>([]);
+  const [trabalhosAvaliados, setTrabalhosAvaliados] = useState<Submission[]>([]);
   const { toast } = useToast();
+  const { user } = useAuth();
+  const navigate = useNavigate();
 
-  // Dados simulados
-  const stats = {
-    pendentes: 3,
-    avaliados: 12
+  useEffect(() => {
+    // Redirect if not logged in as professor
+    if (!user || user.role !== 'professor') {
+      navigate('/');
+      toast({
+        title: 'Acesso negado',
+        description: 'Você não tem permissão para acessar esta página.',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    loadSubmissions();
+  }, [user, navigate]);
+
+  const loadSubmissions = () => {
+    if (!user) return;
+    
+    // Get all submissions assigned to this professor
+    const allSubmissions = storageService.getSubmissionsByProfessor(user.id);
+    
+    // Filter pending and evaluated submissions
+    const pending = allSubmissions.filter(sub => !sub.resultado || sub.resultado === 'Em análise');
+    const evaluated = allSubmissions.filter(sub => sub.resultado && sub.resultado !== 'Em análise');
+    
+    setTrabalhosPendentes(pending);
+    setTrabalhosAvaliados(evaluated);
   };
 
-  const trabalhosPendentes = [
-    {
-      id: 1,
-      titulo: 'Políticas Públicas de Assistência Social: Desafios na Implementação',
-      areaTematica: 'Políticas Públicas',
-      dataEnvio: '2025-01-15',
-      arquivo: 'trabalho1.pdf'
-    },
-    {
-      id: 2,
-      titulo: 'Serviço Social e Saúde Mental: Práticas Inovadoras',
-      areaTematica: 'Saúde Mental',
-      dataEnvio: '2025-01-16',
-      arquivo: 'trabalho2.pdf'
-    },
-    {
-      id: 3,
-      titulo: 'Direitos da Criança e do Adolescente: Análise de Casos',
-      areaTematica: 'Direitos Humanos',
-      dataEnvio: '2025-01-17',
-      arquivo: 'trabalho3.pdf'
+  const handleAvaliacao = (id: string, resultado: 'Aprovado' | 'Reprovado') => {
+    const submission = storageService.getSubmissionById(id);
+    
+    if (!submission) {
+      toast({
+        title: 'Erro',
+        description: 'Trabalho não encontrado.',
+        variant: 'destructive'
+      });
+      return;
     }
-  ];
-
-  const trabalhosAvaliados = [
-    {
-      id: 4,
-      titulo: 'Família e Vulnerabilidade Social',
-      areaTematica: 'Família',
-      dataAvaliacao: '2025-01-10',
-      resultado: 'Aprovado',
-      feedback: 'Trabalho bem estruturado com boa fundamentação teórica.'
-    },
-    {
-      id: 5,
-      titulo: 'Metodologia em Serviço Social',
-      areaTematica: 'Metodologia',
-      dataAvaliacao: '2025-01-12',
-      resultado: 'Reprovado',
-      feedback: 'Necessita melhor desenvolvimento metodológico.'
-    }
-  ];
-
-  const handleAvaliacao = (id: number, resultado: 'Aprovado' | 'Reprovado') => {
+    
+    // Update submission
+    const updatedSubmission: Submission = {
+      ...submission,
+      resultado: resultado,
+      feedback: feedback
+    };
+    
+    // Save updated submission
+    storageService.saveSubmission(updatedSubmission);
+    
     toast({
       title: `Trabalho ${resultado.toLowerCase()}!`,
       description: `O resultado foi registrado no sistema.`,
     });
     
-    console.log(`Trabalho ${id} ${resultado} com feedback: ${feedback}`);
+    // Refresh submissions list
+    loadSubmissions();
     setFeedback('');
   };
 
@@ -80,6 +88,11 @@ const ProfessorDashboard = () => {
       default:
         return <Badge variant="secondary">-</Badge>;
     }
+  };
+
+  const stats = {
+    pendentes: trabalhosPendentes.length,
+    avaliados: trabalhosAvaliados.length
   };
 
   return (
