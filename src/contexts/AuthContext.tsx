@@ -43,40 +43,40 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         .from('profiles')
         .select('*')
         .eq('id', userId)
-        .single();
+        .maybeSingle();
 
       if (error) {
         console.error('Erro ao buscar perfil:', error);
+        return null;
+      }
+
+      if (!profile) {
+        console.log('Perfil não encontrado, tentando criar...');
+        const { data: authUser } = await supabase.auth.getUser();
         
-        // Se o perfil não existe, criar um novo com base nos dados do auth
-        if (error.code === 'PGRST116') {
-          console.log('Perfil não encontrado, tentando criar...');
-          const { data: authUser } = await supabase.auth.getUser();
-          
-          if (authUser.user) {
-            const newProfile = {
-              id: authUser.user.id,
-              nome: authUser.user.user_metadata?.nome || authUser.user.email?.split('@')[0] || '',
-              email: authUser.user.email || '',
-              cpf: authUser.user.user_metadata?.cpf || null,
-              instituicao: authUser.user.user_metadata?.instituicao || null,
-              tipo_usuario: 'participante' as const
-            };
+        if (authUser.user) {
+          const newProfile = {
+            id: authUser.user.id,
+            nome: authUser.user.user_metadata?.nome || authUser.user.email?.split('@')[0] || '',
+            email: authUser.user.email || '',
+            cpf: authUser.user.user_metadata?.cpf || null,
+            instituicao: authUser.user.user_metadata?.instituicao || null,
+            tipo_usuario: 'participante' as const
+          };
 
-            const { data: createdProfile, error: createError } = await supabase
-              .from('profiles')
-              .insert(newProfile)
-              .select()
-              .single();
+          const { data: createdProfile, error: createError } = await supabase
+            .from('profiles')
+            .insert(newProfile)
+            .select()
+            .single();
 
-            if (createError) {
-              console.error('Erro ao criar perfil:', createError);
-              return null;
-            }
-
-            console.log('Perfil criado com sucesso:', createdProfile);
-            return createdProfile;
+          if (createError) {
+            console.error('Erro ao criar perfil:', createError);
+            return null;
           }
+
+          console.log('Perfil criado com sucesso:', createdProfile);
+          return createdProfile;
         }
         return null;
       }
