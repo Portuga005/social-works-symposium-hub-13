@@ -12,7 +12,7 @@ import { useAdminStudents } from '@/hooks/useAdminStudents';
 const AdminDashboard = () => {
   const [activeTab, setActiveTab] = useState('estatisticas');
   const { data: stats, isLoading: statsLoading, error: statsError } = useAdminStats();
-  const { data: alunos, isLoading: alunosLoading, error: alunosError } = useAdminStudents();
+  const { data: alunos = [], isLoading: alunosLoading, error: alunosError } = useAdminStudents();
 
   console.log('=== ADMIN DASHBOARD ===');
   console.log('Stats:', stats);

@@ -292,6 +292,22 @@ export type Database = {
           total_professores: number
         }[]
       }
+      get_all_students_for_admin: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          id: string
+          nome: string
+          cpf: string
+          email: string
+          instituicao: string
+          status_trabalho: string
+          resultado: string
+          trabalho_id: string
+          trabalho_titulo: string
+          arquivo_url: string
+          arquivo_nome: string
+        }[]
+      }
       get_trabalhos_professor: {
         Args: { professor_uuid: string }
         Returns: {
