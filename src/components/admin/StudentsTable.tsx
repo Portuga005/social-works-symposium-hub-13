@@ -1,8 +1,11 @@
 
+import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Download } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 interface Student {
   id: string;
@@ -12,7 +15,12 @@ interface Student {
   instituicao: string;
   statusTrabalho: string;
   resultado: string;
-  trabalho: any;
+  trabalho: {
+    id: string;
+    titulo: string;
+    arquivo_url: string;
+    arquivo_nome: string;
+  } | null;
 }
 
 interface StudentsTableProps {
@@ -20,6 +28,8 @@ interface StudentsTableProps {
 }
 
 const StudentsTable = ({ alunos }: StudentsTableProps) => {
+  const [downloadingFiles, setDownloadingFiles] = useState<Set<string>>(new Set());
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'Aprovado':
@@ -33,9 +43,59 @@ const StudentsTable = ({ alunos }: StudentsTableProps) => {
     }
   };
 
-  const handleDownloadFile = (aluno: Student) => {
-    if (aluno.trabalho?.arquivo_url) {
-      window.open(aluno.trabalho.arquivo_url, '_blank');
+  const handleDownloadFile = async (aluno: Student) => {
+    if (!aluno.trabalho?.arquivo_nome || !aluno.trabalho?.id) {
+      toast.error('Arquivo não encontrado.');
+      return;
+    }
+
+    const fileId = aluno.trabalho.id;
+    setDownloadingFiles(prev => new Set(prev).add(fileId));
+    
+    try {
+      // Buscar informações completas do trabalho
+      const { data: trabalho, error } = await supabase
+        .from('trabalhos')
+        .select('user_id, arquivo_storage_path, arquivo_nome')
+        .eq('id', aluno.trabalho.id)
+        .single();
+
+      if (error || !trabalho) {
+        throw new Error('Trabalho não encontrado');
+      }
+
+      const filePath = trabalho.arquivo_storage_path || `${trabalho.user_id}/${trabalho.arquivo_nome}`;
+
+      // Download do arquivo do Supabase Storage
+      const { data, error: downloadError } = await supabase.storage
+        .from('trabalhos')
+        .download(filePath);
+
+      if (downloadError) {
+        throw new Error('Erro ao baixar arquivo: ' + downloadError.message);
+      }
+
+      // Criar URL para download
+      const url = URL.createObjectURL(data);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = aluno.trabalho.arquivo_nome;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      toast.success('Download iniciado com sucesso!');
+
+    } catch (error: any) {
+      console.error('Error downloading file:', error);
+      toast.error('Erro ao baixar arquivo: ' + error.message);
+    } finally {
+      setDownloadingFiles(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(fileId);
+        return newSet;
+      });
     }
   };
 
@@ -76,16 +136,15 @@ const StudentsTable = ({ alunos }: StudentsTableProps) => {
                   <td className="py-3 px-4">
                     <div className="flex space-x-2">
                       {aluno.statusTrabalho === 'Enviado' && aluno.trabalho && (
-                        <>
-                          <Button 
-                            size="sm" 
-                            variant="outline"
-                            onClick={() => handleDownloadFile(aluno)}
-                          >
-                            <Download className="w-4 h-4 mr-1" />
-                            Baixar
-                          </Button>
-                        </>
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          onClick={() => handleDownloadFile(aluno)}
+                          disabled={downloadingFiles.has(aluno.trabalho!.id)}
+                        >
+                          <Download className="w-4 h-4 mr-1" />
+                          {downloadingFiles.has(aluno.trabalho!.id) ? 'Baixando...' : 'Baixar'}
+                        </Button>
                       )}
                     </div>
                   </td>

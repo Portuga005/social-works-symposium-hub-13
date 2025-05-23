@@ -11,7 +11,6 @@ type UserProfile = {
   cpf: string | null;
   instituicao: string | null;
   tipo_usuario: 'participante' | 'professor' | 'admin';
-  trabalhosSubmetidos: boolean;
 };
 
 type AuthContextType = {
@@ -48,16 +47,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return null;
       }
 
-      // Check if user has submitted works
-      const { data: trabalhos } = await supabase
-        .from('trabalhos')
-        .select('id')
-        .eq('user_id', userId);
-
-      return {
-        ...profile,
-        trabalhosSubmetidos: (trabalhos?.length || 0) > 0
-      };
+      return profile;
     } catch (error) {
       console.error('Error in fetchUserProfile:', error);
       return null;

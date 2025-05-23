@@ -184,6 +184,7 @@ export type Database = {
         Row: {
           area_tematica_id: string
           arquivo_nome: string | null
+          arquivo_storage_path: string | null
           arquivo_url: string | null
           avaliado_por: string | null
           created_at: string | null
@@ -202,6 +203,7 @@ export type Database = {
         Insert: {
           area_tematica_id: string
           arquivo_nome?: string | null
+          arquivo_storage_path?: string | null
           arquivo_url?: string | null
           avaliado_por?: string | null
           created_at?: string | null
@@ -220,6 +222,7 @@ export type Database = {
         Update: {
           area_tematica_id?: string
           arquivo_nome?: string | null
+          arquivo_storage_path?: string | null
           arquivo_url?: string | null
           avaliado_por?: string | null
           created_at?: string | null

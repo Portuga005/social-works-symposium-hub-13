@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Upload, File, AlertTriangle } from 'lucide-react';
+import { Upload, File, AlertTriangle, X } from 'lucide-react';
 
 interface SubmitWorkModalProps {
   onClose: () => void;
@@ -19,8 +19,18 @@ type AreaTematica = {
   descricao: string | null;
 };
 
+type TrabalhoExistente = {
+  id: string;
+  titulo: string;
+  tipo: string;
+  area_tematica: { nome: string };
+  arquivo_nome: string;
+  status_avaliacao: string;
+  created_at: string;
+};
+
 export const SubmitWorkModal = ({ onClose }: SubmitWorkModalProps) => {
-  const { user, updateUserInfo } = useAuth();
+  const { user } = useAuth();
   
   const [formData, setFormData] = useState({
     areaTematica: '',
@@ -32,25 +42,49 @@ export const SubmitWorkModal = ({ onClose }: SubmitWorkModalProps) => {
   const [loading, setLoading] = useState(false);
   const [dragActive, setDragActive] = useState(false);
   const [areasTematicas, setAreasTematicas] = useState<AreaTematica[]>([]);
+  const [trabalhoExistente, setTrabalhoExistente] = useState<TrabalhoExistente | null>(null);
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
 
   useEffect(() => {
-    const fetchAreasTematicas = async () => {
-      const { data, error } = await supabase
+    const fetchData = async () => {
+      // Buscar áreas temáticas
+      const { data: areas, error: areasError } = await supabase
         .from('areas_tematicas')
         .select('*')
         .eq('ativa', true)
         .order('nome');
 
-      if (error) {
-        console.error('Error fetching areas:', error);
+      if (areasError) {
+        console.error('Error fetching areas:', areasError);
         toast.error('Erro ao carregar áreas temáticas');
       } else {
-        setAreasTematicas(data || []);
+        setAreasTematicas(areas || []);
+      }
+
+      // Verificar se o usuário já tem um trabalho submetido
+      if (user?.id) {
+        const { data: trabalho, error: trabalhoError } = await supabase
+          .from('trabalhos')
+          .select(`
+            id,
+            titulo,
+            tipo,
+            arquivo_nome,
+            status_avaliacao,
+            created_at,
+            area_tematica:areas_tematicas(nome)
+          `)
+          .eq('user_id', user.id)
+          .single();
+
+        if (!trabalhoError && trabalho) {
+          setTrabalhoExistente(trabalho as TrabalhoExistente);
+        }
       }
     };
 
-    fetchAreasTematicas();
-  }, []);
+    fetchData();
+  }, [user?.id]);
   
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();
@@ -92,6 +126,45 @@ export const SubmitWorkModal = ({ onClose }: SubmitWorkModalProps) => {
     setFormData(prev => ({ ...prev, arquivo: file }));
   };
 
+  const handleCancelWork = async () => {
+    if (!trabalhoExistente || !user?.id) return;
+
+    setLoading(true);
+    
+    try {
+      // Deletar arquivo do storage se existir
+      if (trabalhoExistente.arquivo_nome) {
+        const filePath = `${user.id}/${trabalhoExistente.arquivo_nome}`;
+        await supabase.storage
+          .from('trabalhos')
+          .remove([filePath]);
+      }
+
+      // Deletar registros de avaliação
+      await supabase
+        .from('avaliacoes')
+        .delete()
+        .eq('trabalho_id', trabalhoExistente.id);
+
+      // Deletar trabalho
+      const { error } = await supabase
+        .from('trabalhos')
+        .delete()
+        .eq('id', trabalhoExistente.id);
+
+      if (error) throw error;
+
+      toast.success('Trabalho cancelado com sucesso!');
+      setTrabalhoExistente(null);
+      setShowCancelConfirm(false);
+    } catch (error: any) {
+      console.error('Error canceling work:', error);
+      toast.error('Erro ao cancelar trabalho: ' + error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -110,7 +183,7 @@ export const SubmitWorkModal = ({ onClose }: SubmitWorkModalProps) => {
       return;
     }
 
-    if (!user) {
+    if (!user?.id) {
       toast.error('Você precisa estar logado para submeter um trabalho');
       return;
     }
@@ -118,25 +191,46 @@ export const SubmitWorkModal = ({ onClose }: SubmitWorkModalProps) => {
     setLoading(true);
     
     try {
-      // Insert work into database
-      const { error } = await supabase
+      // Upload do arquivo para o Supabase Storage
+      const fileExtension = formData.arquivo.name.split('.').pop();
+      const fileName = `${Date.now()}_${formData.titulo.replace(/[^a-zA-Z0-9]/g, '_')}.${fileExtension}`;
+      const filePath = `${user.id}/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('trabalhos')
+        .upload(filePath, formData.arquivo);
+
+      if (uploadError) {
+        throw new Error('Erro no upload do arquivo: ' + uploadError.message);
+      }
+
+      // Obter URL pública do arquivo
+      const { data: urlData } = supabase.storage
+        .from('trabalhos')
+        .getPublicUrl(filePath);
+
+      // Inserir trabalho no banco de dados
+      const { error: insertError } = await supabase
         .from('trabalhos')
         .insert({
           user_id: user.id,
           area_tematica_id: formData.areaTematica,
           titulo: formData.titulo,
           tipo: formData.tipo,
-          arquivo_nome: formData.arquivo.name,
+          arquivo_nome: fileName,
+          arquivo_storage_path: filePath,
+          arquivo_url: urlData.publicUrl,
           status_avaliacao: 'pendente'
         });
 
-      if (error) {
-        throw error;
+      if (insertError) {
+        // Se falhar a inserção, deletar o arquivo do storage
+        await supabase.storage
+          .from('trabalhos')
+          .remove([filePath]);
+        throw insertError;
       }
 
-      // Update user info to reflect work submission
-      updateUserInfo({ trabalhosSubmetidos: true });
-      
       toast.success('Trabalho enviado com sucesso!');
       onClose();
     } catch (error: any) {
@@ -147,20 +241,83 @@ export const SubmitWorkModal = ({ onClose }: SubmitWorkModalProps) => {
     }
   };
 
-  // Check if user has already submitted a work
-  if (user?.trabalhosSubmetidos) {
+  // Se já tem trabalho submetido, mostrar informações
+  if (trabalhoExistente) {
     return (
-      <div className="text-center py-6 space-y-4">
-        <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-yellow-50 text-yellow-500 mb-4">
-          <AlertTriangle size={32} />
+      <div className="space-y-6">
+        <div className="text-center">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-50 text-green-500 mb-4">
+            <File size={32} />
+          </div>
+          <h3 className="text-xl font-bold">Trabalho Submetido</h3>
+          <p className="text-gray-600">
+            Você já enviou um trabalho para este simpósio.
+          </p>
         </div>
-        <h3 className="text-xl font-bold">Trabalho já submetido</h3>
-        <p className="text-gray-600">
-          Você já enviou um trabalho para este simpósio. Cada participante pode submeter apenas um trabalho.
-        </p>
-        <Button onClick={onClose} className="mt-4">
-          Entendi
-        </Button>
+
+        <div className="bg-gray-50 p-4 rounded-lg space-y-2">
+          <div><strong>Título:</strong> {trabalhoExistente.titulo}</div>
+          <div><strong>Tipo:</strong> {trabalhoExistente.tipo.replace('_', ' ')}</div>
+          <div><strong>Área:</strong> {trabalhoExistente.area_tematica.nome}</div>
+          <div><strong>Arquivo:</strong> {trabalhoExistente.arquivo_nome}</div>
+          <div><strong>Status:</strong> 
+            <span className={`ml-2 px-2 py-1 rounded text-sm ${
+              trabalhoExistente.status_avaliacao === 'aprovado' ? 'bg-green-100 text-green-800' :
+              trabalhoExistente.status_avaliacao === 'rejeitado' ? 'bg-red-100 text-red-800' :
+              'bg-yellow-100 text-yellow-800'
+            }`}>
+              {trabalhoExistente.status_avaliacao === 'pendente' ? 'Em análise' :
+               trabalhoExistente.status_avaliacao === 'aprovado' ? 'Aprovado' : 'Rejeitado'}
+            </span>
+          </div>
+          <div><strong>Enviado em:</strong> {new Date(trabalhoExistente.created_at).toLocaleDateString('pt-BR')}</div>
+        </div>
+
+        {!showCancelConfirm ? (
+          <div className="flex gap-2">
+            <Button onClick={onClose} variant="outline" className="flex-1">
+              Fechar
+            </Button>
+            <Button 
+              onClick={() => setShowCancelConfirm(true)}
+              variant="destructive" 
+              className="flex-1"
+              disabled={trabalhoExistente.status_avaliacao !== 'pendente'}
+            >
+              Cancelar Trabalho
+            </Button>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <div className="bg-red-50 border border-red-200 p-4 rounded-lg">
+              <div className="flex items-center space-x-2 text-red-800 mb-2">
+                <AlertTriangle size={20} />
+                <strong>Confirmação de Cancelamento</strong>
+              </div>
+              <p className="text-red-700 text-sm">
+                Tem certeza que deseja cancelar este trabalho? Esta ação não pode ser desfeita.
+                O arquivo será deletado permanentemente e você poderá enviar um novo trabalho.
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <Button 
+                onClick={() => setShowCancelConfirm(false)}
+                variant="outline" 
+                className="flex-1"
+              >
+                Manter Trabalho
+              </Button>
+              <Button 
+                onClick={handleCancelWork}
+                variant="destructive" 
+                className="flex-1"
+                disabled={loading}
+              >
+                {loading ? "Cancelando..." : "Confirmar Cancelamento"}
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -228,9 +385,22 @@ export const SubmitWorkModal = ({ onClose }: SubmitWorkModalProps) => {
           onDrop={handleDrop}
         >
           {formData.arquivo ? (
-            <div className="flex items-center justify-center space-x-2">
-              <File className="w-6 h-6 text-unespar-blue" />
-              <span className="text-sm font-medium">{formData.arquivo.name}</span>
+            <div className="space-y-2">
+              <div className="flex items-center justify-center space-x-2">
+                <File className="w-6 h-6 text-unespar-blue" />
+                <span className="text-sm font-medium">{formData.arquivo.name}</span>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setFormData(prev => ({ ...prev, arquivo: null }))}
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+              <p className="text-xs text-gray-500">
+                Tamanho: {(formData.arquivo.size / 1024 / 1024).toFixed(2)} MB
+              </p>
             </div>
           ) : (
             <div className="space-y-2">
