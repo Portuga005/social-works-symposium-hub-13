@@ -39,6 +39,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       console.log('Buscando perfil do usuário:', userId);
       
+      // Primeiro, tentar buscar o perfil existente
       const { data: profile, error } = await supabase
         .from('profiles')
         .select('*')
@@ -47,42 +48,47 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       if (error) {
         console.error('Erro ao buscar perfil:', error);
+        // Se há erro na consulta, retornar null
         return null;
       }
 
-      if (!profile) {
-        console.log('Perfil não encontrado, tentando criar...');
-        const { data: authUser } = await supabase.auth.getUser();
-        
-        if (authUser.user) {
-          const newProfile = {
-            id: authUser.user.id,
-            nome: authUser.user.user_metadata?.nome || authUser.user.email?.split('@')[0] || '',
-            email: authUser.user.email || '',
-            cpf: authUser.user.user_metadata?.cpf || null,
-            instituicao: authUser.user.user_metadata?.instituicao || null,
-            tipo_usuario: 'participante' as const
-          };
+      if (profile) {
+        console.log('Perfil encontrado:', profile);
+        return profile;
+      }
 
-          const { data: createdProfile, error: createError } = await supabase
-            .from('profiles')
-            .insert(newProfile)
-            .select()
-            .single();
-
-          if (createError) {
-            console.error('Erro ao criar perfil:', createError);
-            return null;
-          }
-
-          console.log('Perfil criado com sucesso:', createdProfile);
-          return createdProfile;
-        }
+      // Se não encontrou perfil, tentar criar um novo
+      console.log('Perfil não encontrado, criando novo...');
+      const { data: authUser } = await supabase.auth.getUser();
+      
+      if (!authUser.user) {
+        console.log('Usuário não autenticado');
         return null;
       }
 
-      console.log('Perfil encontrado:', profile);
-      return profile;
+      const newProfile = {
+        id: authUser.user.id,
+        nome: authUser.user.user_metadata?.nome || authUser.user.email?.split('@')[0] || '',
+        email: authUser.user.email || '',
+        cpf: authUser.user.user_metadata?.cpf || null,
+        instituicao: authUser.user.user_metadata?.instituicao || null,
+        tipo_usuario: 'participante' as const
+      };
+
+      const { data: createdProfile, error: createError } = await supabase
+        .from('profiles')
+        .insert(newProfile)
+        .select()
+        .single();
+
+      if (createError) {
+        console.error('Erro ao criar perfil:', createError);
+        return null;
+      }
+
+      console.log('Perfil criado com sucesso:', createdProfile);
+      return createdProfile;
+
     } catch (error) {
       console.error('Erro na função fetchUserProfile:', error);
       return null;
@@ -93,19 +99,28 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     // Seed áreas temáticas quando o app inicializar
     seedAreasTemáticas();
 
+    let mounted = true;
+
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         console.log('Auth state change:', event, session?.user?.id);
+        
+        if (!mounted) return;
+        
         setSession(session);
+        setLoading(true);
         
         if (session?.user) {
-          // Defer profile fetching to avoid blocking auth state change
+          // Usar setTimeout para evitar problemas de recursão
           setTimeout(async () => {
+            if (!mounted) return;
             const profile = await fetchUserProfile(session.user.id);
-            setUser(profile);
-            setLoading(false);
-          }, 0);
+            if (mounted) {
+              setUser(profile);
+              setLoading(false);
+            }
+          }, 100);
         } else {
           setUser(null);
           setLoading(false);
@@ -114,20 +129,46 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     );
 
     // Check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      console.log('Sessão existente:', session?.user?.id);
-      setSession(session);
-      if (session?.user) {
-        fetchUserProfile(session.user.id).then(profile => {
-          setUser(profile);
+    const initializeAuth = async () => {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.error('Erro ao obter sessão:', error);
           setLoading(false);
-        });
-      } else {
-        setLoading(false);
-      }
-    });
+          return;
+        }
 
-    return () => subscription.unsubscribe();
+        console.log('Sessão existente:', session?.user?.id);
+        
+        if (!mounted) return;
+        
+        setSession(session);
+        
+        if (session?.user) {
+          const profile = await fetchUserProfile(session.user.id);
+          if (mounted) {
+            setUser(profile);
+          }
+        }
+        
+        if (mounted) {
+          setLoading(false);
+        }
+      } catch (error) {
+        console.error('Erro na inicialização da auth:', error);
+        if (mounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    initializeAuth();
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const login = async (email: string, password: string) => {

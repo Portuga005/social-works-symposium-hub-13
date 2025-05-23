@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -10,23 +9,28 @@ import { Upload, FileText, Edit, Trash2, AlertCircle } from 'lucide-react';
 import SubmitWorkModal from './SubmitWorkModal';
 
 const SubmissionSection = () => {
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, loading: authLoading } = useAuth();
   const [trabalho, setTrabalho] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [showSubmitModal, setShowSubmitModal] = useState(false);
   const [deletingWork, setDeletingWork] = useState(false);
 
   useEffect(() => {
-    if (isAuthenticated && user) {
+    if (isAuthenticated && user && !authLoading) {
       fetchUserWork();
     }
-  }, [isAuthenticated, user]);
+  }, [isAuthenticated, user, authLoading]);
 
   const fetchUserWork = async () => {
-    if (!user) return;
+    if (!user) {
+      console.log('Usuário não disponível para buscar trabalho');
+      return;
+    }
 
     setLoading(true);
     try {
+      console.log('Buscando trabalho para usuário:', user.id);
+      
       const { data, error } = await supabase
         .from('trabalhos')
         .select(`
@@ -34,18 +38,22 @@ const SubmissionSection = () => {
           areas_tematicas (nome)
         `)
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle();
 
-      if (error && error.code !== 'PGRST116') {
-        throw error;
+      if (error) {
+        console.error('Erro ao buscar trabalho:', error);
+        if (error.code !== 'PGRST116') {
+          toast.error('Erro ao carregar trabalho');
+        }
+        setTrabalho(null);
+      } else {
+        console.log('Trabalho encontrado:', data);
+        setTrabalho(data || null);
       }
-
-      setTrabalho(data || null);
     } catch (error: any) {
-      console.error('Erro ao buscar trabalho:', error);
-      if (error.code !== 'PGRST116') {
-        toast.error('Erro ao carregar trabalho');
-      }
+      console.error('Erro na função fetchUserWork:', error);
+      toast.error('Erro ao carregar trabalho');
+      setTrabalho(null);
     } finally {
       setLoading(false);
     }
@@ -117,6 +125,21 @@ const SubmissionSection = () => {
         return tipo;
     }
   };
+
+  if (authLoading) {
+    return (
+      <section id="submissao" className="py-16 bg-gray-50">
+        <div className="container mx-auto px-4">
+          <Card className="max-w-2xl mx-auto">
+            <CardContent className="text-center py-12">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-unespar-blue mx-auto"></div>
+              <p className="mt-4 text-gray-600">Carregando...</p>
+            </CardContent>
+          </Card>
+        </div>
+      </section>
+    );
+  }
 
   if (!isAuthenticated) {
     return (
