@@ -34,10 +34,24 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [profileFetched, setProfileFetched] = useState(false);
 
-  const fetchUserProfile = async (userId: string): Promise<UserProfile | null> => {
+  const createFallbackProfile = (session: Session): UserProfile => {
+    return {
+      id: session.user.id,
+      nome: session.user.user_metadata?.nome || 
+            session.user.user_metadata?.full_name || 
+            session.user.email?.split('@')[0] || 'Usuário',
+      email: session.user.email || '',
+      cpf: session.user.user_metadata?.cpf || null,
+      instituicao: session.user.user_metadata?.instituicao || null,
+      tipo_usuario: 'participante'
+    };
+  };
+
+  const fetchUserProfile = async (userId: string, userSession: Session): Promise<UserProfile> => {
     try {
-      console.log('Buscando perfil do usuário:', userId);
+      console.log('Tentando buscar perfil do usuário:', userId);
       
       const { data: profile, error } = await supabase
         .from('profiles')
@@ -47,21 +61,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       if (error) {
         console.error('Erro ao buscar perfil:', error);
-        
-        // Se há erro de política RLS, vamos criar um perfil temporário baseado na sessão
-        if (error.code === '42P17' || error.message.includes('infinite recursion')) {
-          console.log('Erro de RLS detectado, criando perfil temporário baseado na sessão');
-          return {
-            id: userId,
-            nome: session?.user?.user_metadata?.nome || session?.user?.email?.split('@')[0] || 'Usuário',
-            email: session?.user?.email || '',
-            cpf: session?.user?.user_metadata?.cpf || null,
-            instituicao: session?.user?.user_metadata?.instituicao || null,
-            tipo_usuario: 'participante'
-          };
-        }
-        
-        return null;
+        console.log('Criando perfil temporário devido ao erro');
+        return createFallbackProfile(userSession);
       }
 
       if (profile) {
@@ -70,27 +71,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
 
       console.log('Perfil não encontrado - criando perfil temporário');
-      // Se não encontrou perfil, criar um temporário
-      return {
-        id: userId,
-        nome: session?.user?.user_metadata?.nome || session?.user?.email?.split('@')[0] || 'Usuário',
-        email: session?.user?.email || '',
-        cpf: session?.user?.user_metadata?.cpf || null,
-        instituicao: session?.user?.user_metadata?.instituicao || null,
-        tipo_usuario: 'participante'
-      };
+      return createFallbackProfile(userSession);
 
     } catch (error) {
       console.error('Erro na função fetchUserProfile:', error);
-      // Em caso de erro, criar perfil temporário para não bloquear o login
-      return {
-        id: userId,
-        nome: session?.user?.user_metadata?.nome || session?.user?.email?.split('@')[0] || 'Usuário',
-        email: session?.user?.email || '',
-        cpf: session?.user?.user_metadata?.cpf || null,
-        instituicao: session?.user?.user_metadata?.instituicao || null,
-        tipo_usuario: 'participante'
-      };
+      console.log('Criando perfil temporário devido à exceção');
+      return createFallbackProfile(userSession);
     }
   };
 
@@ -99,48 +85,57 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     seedAreasTemáticas();
 
     let mounted = true;
+    let isProcessing = false;
 
-    // Set up auth state listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log('Auth state change:', event, session?.user?.id);
-        
-        if (!mounted) return;
-        
+    const handleAuthChange = async (event: string, session: Session | null) => {
+      console.log('Auth state change:', event, session?.user?.id);
+      
+      if (!mounted || isProcessing) {
+        console.log('Ignorando mudança de auth - componente desmontado ou processando');
+        return;
+      }
+
+      isProcessing = true;
+      
+      try {
         setSession(session);
         
-        if (session?.user) {
+        if (session?.user && !profileFetched) {
+          console.log('Processando novo usuário logado');
           setLoading(true);
           
           try {
-            const profile = await fetchUserProfile(session.user.id);
+            const profile = await fetchUserProfile(session.user.id, session);
             
             if (mounted) {
               setUser(profile);
-              setLoading(false);
+              setProfileFetched(true);
               console.log('Usuário autenticado com sucesso:', profile?.nome);
             }
           } catch (error) {
-            console.error('Erro ao processar autenticação:', error);
+            console.error('Erro ao processar perfil, criando perfil mínimo:', error);
             if (mounted) {
-              // Mesmo com erro, criar um perfil mínimo para não bloquear o acesso
-              setUser({
-                id: session.user.id,
-                nome: session.user.user_metadata?.nome || session.user.email?.split('@')[0] || 'Usuário',
-                email: session.user.email || '',
-                cpf: session.user.user_metadata?.cpf || null,
-                instituicao: session.user.user_metadata?.instituicao || null,
-                tipo_usuario: 'participante'
-              });
-              setLoading(false);
+              const fallbackProfile = createFallbackProfile(session);
+              setUser(fallbackProfile);
+              setProfileFetched(true);
             }
           }
-        } else {
+        } else if (!session) {
+          console.log('Usuário deslogado');
           setUser(null);
+          setProfileFetched(false);
+        }
+        
+        if (mounted) {
           setLoading(false);
         }
+      } finally {
+        isProcessing = false;
       }
-    );
+    };
+
+    // Set up auth state listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(handleAuthChange);
 
     // Check for existing session
     const initializeAuth = async () => {
@@ -149,35 +144,30 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         
         if (error) {
           console.error('Erro ao obter sessão:', error);
-          setLoading(false);
+          if (mounted) {
+            setLoading(false);
+          }
           return;
         }
 
-        console.log('Sessão existente:', session?.user?.id);
+        console.log('Sessão existente encontrada:', session?.user?.id);
         
-        if (!mounted) return;
-        
-        setSession(session);
-        
-        if (session?.user) {
+        if (session?.user && mounted) {
           try {
-            const profile = await fetchUserProfile(session.user.id);
+            const profile = await fetchUserProfile(session.user.id, session);
             if (mounted) {
+              setSession(session);
               setUser(profile);
+              setProfileFetched(true);
               console.log('Sessão restaurada com sucesso:', profile?.nome);
             }
           } catch (error) {
             console.error('Erro ao buscar perfil na inicialização:', error);
             if (mounted) {
-              // Criar perfil mínimo mesmo com erro
-              setUser({
-                id: session.user.id,
-                nome: session.user.user_metadata?.nome || session.user.email?.split('@')[0] || 'Usuário',
-                email: session.user.email || '',
-                cpf: session.user.user_metadata?.cpf || null,
-                instituicao: session.user.user_metadata?.instituicao || null,
-                tipo_usuario: 'participante'
-              });
+              const fallbackProfile = createFallbackProfile(session);
+              setSession(session);
+              setUser(fallbackProfile);
+              setProfileFetched(true);
             }
           }
         }
@@ -231,6 +221,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } else {
       setUser(null);
       setSession(null);
+      setProfileFetched(false);
       toast.info('Logout realizado com sucesso');
     }
   };
