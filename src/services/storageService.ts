@@ -1,4 +1,3 @@
-
 // Storage keys
 export const STORAGE_KEYS = {
   USERS: 'simpUnespar:users',
@@ -134,16 +133,35 @@ export const saveSubmission = (submission: Submission): void => {
   }
 };
 
-// Professor functions
-export const getProfessors = (): User[] => {
-  return getUsers().filter(user => user.role === 'professor');
+// Clear all data except for the admin and professor users
+export const clearAllDataExceptUsers = (): void => {
+  const users = getUsers();
+  
+  // Filter to keep only admin and professor users
+  const adminUser = users.find(user => user.email === 'admin@unespar.edu.br');
+  const professorUser = users.find(user => user.email === 'profa@unespar.edu.br');
+  
+  const essentialUsers = [];
+  if (adminUser) essentialUsers.push(adminUser);
+  if (professorUser) essentialUsers.push(professorUser);
+  
+  // Clear all storage except users
+  setItem(STORAGE_KEYS.USERS, essentialUsers);
+  setItem(STORAGE_KEYS.SUBMISSIONS, []);
+  
+  // Clear current user if it's not admin or professor
+  const currentUser = getCurrentUser();
+  if (currentUser && (currentUser.email !== 'admin@unespar.edu.br' && currentUser.email !== 'profa@unespar.edu.br')) {
+    setItem(STORAGE_KEYS.CURRENT_USER, null);
+  }
 };
 
-// Initialize storage with default data
+// Initialize storage with only admin and professor accounts
 export const initializeStorage = (): void => {
   // Check if users already exist before initializing
   const existingUsers = getUsers();
   
+  // Only initialize if no users exist
   if (existingUsers.length === 0) {
     // Add default admin
     saveUser({
@@ -154,7 +172,7 @@ export const initializeStorage = (): void => {
       instituicao: 'UNESPAR',
       trabalhosSubmetidos: false,
       role: 'admin',
-      password: 'admin123' // Store password for authentication
+      password: 'admin123'
     });
     
     // Add default professor
@@ -166,14 +184,22 @@ export const initializeStorage = (): void => {
       instituicao: 'UNESPAR',
       trabalhosSubmetidos: false,
       role: 'professor',
-      password: 'prof123' // Store password for authentication
+      password: 'prof123'
     });
   }
   
-  // Initialize submissions if needed
+  // Initialize submissions if needed but with empty array
   if (!localStorage.getItem(STORAGE_KEYS.SUBMISSIONS)) {
     setItem(STORAGE_KEYS.SUBMISSIONS, []);
   }
+  
+  // Clear any fictional data
+  clearAllDataExceptUsers();
+};
+
+// Professor functions
+export const getProfessors = (): User[] => {
+  return getUsers().filter(user => user.role === 'professor');
 };
 
 export default {
@@ -189,5 +215,6 @@ export default {
   getEvaluatedSubmissions,
   saveSubmission,
   getProfessors,
-  initializeStorage
+  initializeStorage,
+  clearAllDataExceptUsers
 };

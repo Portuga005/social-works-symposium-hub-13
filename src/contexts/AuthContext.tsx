@@ -23,7 +23,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Initialize storage with default data
+    // Initialize storage with only admin and professor users
     storageService.initializeStorage();
     
     // Check if user is already logged in
