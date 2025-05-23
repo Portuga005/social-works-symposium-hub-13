@@ -1,10 +1,15 @@
 
 import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { toast } from 'sonner';
-// Updated import to use the re-exported types
-import { User } from '@/services/storage/types';
-import { getCurrentUser, updateCurrentUser, authenticateUser } from '@/services/storage/userService';
-import { initializeStorage, debugStorage } from '@/services/storage/systemService';
+
+type User = {
+  id: string;
+  nome: string;
+  email: string;
+  cpf: string;
+  instituicao: string;
+  trabalhosSubmetidos: boolean;
+};
 
 type AuthContextType = {
   user: User | null;
@@ -26,19 +31,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Initialize storage with only admin and professor users
-    initializeStorage();
-    
-    // Check if user is already logged in
-    const storedUser = getCurrentUser();
-    console.log('AuthContext initialization - Stored user:', storedUser);
+    // Verificar se o usuário está armazenado no localStorage
+    const storedUser = localStorage.getItem('@simpUnespar:user');
     
     if (storedUser) {
-      setUser(storedUser);
+      setUser(JSON.parse(storedUser));
     }
-    
-    // Debug the storage
-    debugStorage();
     
     setLoading(false);
   }, []);
@@ -47,38 +45,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setLoading(true);
     
     try {
-      console.log('Attempting login with:', email);
+      // Simulação de login - em produção isso seria uma chamada API
+      await new Promise(resolve => setTimeout(resolve, 1000));
       
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // Usuário mockado para demonstração
+      const mockUser: User = {
+        id: '1',
+        nome: 'Usuário Teste',
+        email: email,
+        cpf: '123.456.789-00',
+        instituicao: 'UNESPAR',
+        trabalhosSubmetidos: false
+      };
       
-      // Use the authenticateUser function
-      const authenticatedUser = authenticateUser(email, password);
-      console.log('Authentication result:', authenticatedUser);
-      
-      if (authenticatedUser) {
-        // Create a copy without the password field for security
-        const { password: _, ...userWithoutPassword } = authenticatedUser;
-        
-        setUser(userWithoutPassword as User);
-        updateCurrentUser(userWithoutPassword as User);
-        
-        // Show success message based on role
-        if (authenticatedUser.role === 'admin') {
-          toast.success('Login administrativo realizado com sucesso!');
-        } else if (authenticatedUser.role === 'professor') {
-          toast.success('Login de professor realizado com sucesso!');
-        } else {
-          toast.success('Login realizado com sucesso!');
-        }
-        return;
-      }
-      
-      throw new Error('Credenciais inválidas');
+      setUser(mockUser);
+      localStorage.setItem('@simpUnespar:user', JSON.stringify(mockUser));
+      toast.success('Login realizado com sucesso!');
     } catch (error) {
       toast.error('Erro ao fazer login. Verifique suas credenciais.');
       console.error(error);
-      throw error; // Re-throw to allow catching in the login component
     } finally {
       setLoading(false);
     }
@@ -86,7 +71,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const logout = () => {
     setUser(null);
-    updateCurrentUser(null);
+    localStorage.removeItem('@simpUnespar:user');
     toast.info('Logout realizado com sucesso');
   };
 
@@ -94,7 +79,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (user) {
       const updatedUser = { ...user, ...data };
       setUser(updatedUser);
-      updateCurrentUser(updatedUser);
+      localStorage.setItem('@simpUnespar:user', JSON.stringify(updatedUser));
       toast.success('Informações atualizadas com sucesso!');
     }
   };

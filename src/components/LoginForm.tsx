@@ -4,7 +4,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/contexts/AuthContext';
-import { toast } from 'sonner';
 
 interface LoginFormProps {
   onClose: () => void;
@@ -21,13 +20,9 @@ export const LoginForm = ({ onClose }: LoginFormProps) => {
     setLoading(true);
 
     try {
-      console.log('Attempting regular login with:', email);
-      
       await login(email, password);
-      toast.success('Login realizado com sucesso!');
       onClose();
     } catch (error) {
-      toast.error('Falha no login. Verifique suas credenciais.');
       console.error(error);
     } finally {
       setLoading(false);

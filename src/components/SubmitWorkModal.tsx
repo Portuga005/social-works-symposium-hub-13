@@ -7,7 +7,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { Upload, File, AlertTriangle } from 'lucide-react';
-import storageService, { Submission } from '@/services/storageService';
 
 interface SubmitWorkModalProps {
   onClose: () => void;
@@ -22,35 +21,6 @@ const AREAS_TEMATICAS = [
   { id: '6', name: 'Serviço Social na Saúde' },
   { id: '7', name: 'Relatos de Experiência Profissional' }
 ];
-
-// Helper to assign submission to a professor using round-robin
-const assignSubmissionToProfessor = (): string => {
-  const professors = storageService.getProfessors();
-  
-  if (professors.length === 0) {
-    return '';
-  }
-  
-  // Get all submissions
-  const submissions = storageService.getSubmissions();
-  
-  // If no submissions yet, return first professor
-  if (submissions.length === 0) {
-    return professors[0].id;
-  }
-  
-  // Get the last assigned professor
-  const lastSubmission = submissions[submissions.length - 1];
-  const lastProfessorId = lastSubmission.professorId || '';
-  
-  // Find index of last professor
-  const lastProfessorIndex = professors.findIndex(p => p.id === lastProfessorId);
-  
-  // Get next professor (or first if at end/not found)
-  const nextProfessorIndex = (lastProfessorIndex + 1) % professors.length;
-  
-  return professors[nextProfessorIndex].id;
-};
 
 export const SubmitWorkModal = ({ onClose }: SubmitWorkModalProps) => {
   const { user, updateUserInfo } = useAuth();
@@ -107,11 +77,6 @@ export const SubmitWorkModal = ({ onClose }: SubmitWorkModalProps) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!user) {
-      toast.error('Você precisa estar logado para enviar um trabalho.');
-      return;
-    }
-    
     if (!formData.areaTematica) {
       toast.error('Selecione uma área temática');
       return;
@@ -130,28 +95,10 @@ export const SubmitWorkModal = ({ onClose }: SubmitWorkModalProps) => {
     setLoading(true);
     
     try {
-      // Simulate API call
+      // Simular envio para API
       await new Promise(resolve => setTimeout(resolve, 1500));
       
-      // In a real app, we'd upload the file to cloud storage here
-      // For this demo, we're just simulating that with the filename
-      
-      // Create a new submission
-      const newSubmission: Submission = {
-        id: `sub-${Date.now()}`,
-        userId: user.id,
-        titulo: formData.titulo,
-        areaTematica: formData.areaTematica,
-        dataEnvio: new Date().toISOString(),
-        arquivo: formData.arquivo.name,
-        resultado: 'Em análise',
-        professorId: assignSubmissionToProfessor()
-      };
-      
-      // Save submission
-      storageService.saveSubmission(newSubmission);
-      
-      // Update user's status
+      // Atualizar status do usuário
       updateUserInfo({ trabalhosSubmetidos: true });
       
       toast.success('Trabalho enviado com sucesso!');

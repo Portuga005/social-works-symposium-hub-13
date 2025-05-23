@@ -4,36 +4,38 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { toast } from 'sonner';
+import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
 
 const AdminLogin = () => {
   const [credentials, setCredentials] = useState({ email: '', password: '' });
   const [loading, setLoading] = useState(false);
+  const { toast } = useToast();
   const navigate = useNavigate();
-  const { login } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-      console.log('Attempting admin login with:', credentials.email);
+      // Simular login administrativo
+      await new Promise(resolve => setTimeout(resolve, 1000));
       
-      // Use the AuthContext login function
-      await login(credentials.email, credentials.password);
-      
-      // Check if the email is correct for an admin
-      if (credentials.email === 'admin@unespar.edu.br') {
-        toast.success("Login realizado com sucesso! Redirecionando para o painel administrativo...");
+      if (credentials.email === 'admin@unespar.edu.br' && credentials.password === 'admin123') {
+        toast({
+          title: "Login realizado com sucesso!",
+          description: "Redirecionando para o painel administrativo...",
+        });
         navigate('/admin/dashboard');
       } else {
         throw new Error('Credenciais inválidas');
       }
     } catch (error) {
-      toast.error("Credenciais inválidas. Tente novamente.");
-      console.error(error);
+      toast({
+        variant: "destructive",
+        title: "Erro no login",
+        description: "Credenciais inválidas. Tente novamente.",
+      });
     } finally {
       setLoading(false);
     }
@@ -88,12 +90,6 @@ const AdminLogin = () => {
             <a href="/" className="text-unespar-blue hover:underline text-sm">
               ← Voltar ao site principal
             </a>
-          </div>
-          
-          <div className="mt-4 p-4 bg-gray-50 rounded-lg">
-            <p className="text-xs text-gray-600 text-center">
-              <strong>Demo:</strong> Use email "admin@unespar.edu.br" e senha "admin123"
-            </p>
           </div>
         </CardContent>
       </Card>

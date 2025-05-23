@@ -1,56 +1,51 @@
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Users, FileText, CheckCircle, Clock, Download, Eye } from 'lucide-react';
-import { useAuth } from '@/contexts/AuthContext';
-import { useToast } from '@/hooks/use-toast';
-import { useNavigate } from 'react-router-dom';
-import storageService, { User, Submission } from '@/services/storageService';
 
 const AdminDashboard = () => {
   const [activeTab, setActiveTab] = useState('estatisticas');
-  const [users, setUsers] = useState<User[]>([]);
-  const [submissions, setSubmissions] = useState<Submission[]>([]);
-  const { user } = useAuth();
-  const { toast } = useToast();
-  const navigate = useNavigate();
 
-  useEffect(() => {
-    // Redirect if not logged in as admin
-    if (!user || user.role !== 'admin') {
-      navigate('/');
-      toast({
-        title: 'Acesso negado',
-        description: 'Você não tem permissão para acessar esta página.',
-        variant: 'destructive'
-      });
-      return;
-    }
-
-    // Load all users and submissions
-    loadData();
-  }, [user, navigate]);
-
-  const loadData = () => {
-    // Get all users except admins
-    const allUsers = storageService.getUsers().filter(u => u.role !== 'admin');
-    setUsers(allUsers);
-
-    // Get all submissions
-    const allSubmissions = storageService.getSubmissions();
-    setSubmissions(allSubmissions);
-  };
-
-  // Calculate statistics
+  // Dados simulados
   const stats = {
-    totalAlunos: users.filter(u => u.role !== 'professor').length,
-    trabalhoEnviados: submissions.length,
-    trabalhosAprovados: submissions.filter(s => s.resultado === 'Aprovado').length,
-    trabalhosPendentes: submissions.filter(s => !s.resultado || s.resultado === 'Em análise').length,
-    trabalhosReprovados: submissions.filter(s => s.resultado === 'Reprovado').length
+    totalAlunos: 156,
+    trabalhoEnviados: 89,
+    trabalhosAprovados: 23,
+    trabalhosPendentes: 45,
+    trabalhosReprovados: 21
   };
+
+  const alunos = [
+    {
+      id: 1,
+      nome: 'Maria Silva Santos',
+      cpf: '123.456.***-**',
+      email: 'maria@email.com',
+      instituicao: 'UNESPAR',
+      statusTrabalho: 'Enviado',
+      resultado: 'Aprovado'
+    },
+    {
+      id: 2,
+      nome: 'João Oliveira Costa',
+      cpf: '987.654.***-**',
+      email: 'joao@email.com',
+      instituicao: 'UEL',
+      statusTrabalho: 'Enviado',
+      resultado: 'Em análise'
+    },
+    {
+      id: 3,
+      nome: 'Ana Paula Ferreira',
+      cpf: '456.789.***-**',
+      email: 'ana@email.com',
+      instituicao: 'UEM',
+      statusTrabalho: 'Não enviado',
+      resultado: '-'
+    }
+  ];
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -64,20 +59,6 @@ const AdminDashboard = () => {
         return <Badge variant="secondary">-</Badge>;
     }
   };
-
-  // Process users and their submissions for display
-  const alunosProcessed = users.filter(u => u.role !== 'professor').map(user => {
-    const userSubmission = submissions.find(s => s.userId === user.id);
-    return {
-      id: user.id,
-      nome: user.nome,
-      cpf: user.cpf.replace(/(\d{3})\.(\d{3})\.(\d{3})/, "$1.$2.***"),
-      email: user.email,
-      instituicao: user.instituicao,
-      statusTrabalho: userSubmission ? 'Enviado' : 'Não enviado',
-      resultado: userSubmission?.resultado || '-'
-    };
-  });
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -242,7 +223,7 @@ const AdminDashboard = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {alunosProcessed.map((aluno) => (
+                      {alunos.map((aluno) => (
                         <tr key={aluno.id} className="border-b hover:bg-gray-50">
                           <td className="py-3 px-4 font-medium">{aluno.nome}</td>
                           <td className="py-3 px-4 text-gray-600">{aluno.cpf}</td>

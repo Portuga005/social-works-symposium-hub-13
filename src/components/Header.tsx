@@ -1,10 +1,10 @@
 
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { LoginForm } from './LoginForm';
 import { RegisterForm } from './RegisterForm';
-import { Menu, X, LogOut, FileText, Settings } from 'lucide-react';
+import { Menu, X, User, LogOut, FileText, Settings } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { UserSettingsModal } from './UserSettingsModal';
 import { SubmitWorkModal } from './SubmitWorkModal';
@@ -43,6 +43,9 @@ const Header = () => {
             <a href="#programacao" className="text-gray-700 hover:text-unespar-blue transition-colors">
               Programação
             </a>
+            <a href="#submissao" className="text-gray-700 hover:text-unespar-blue transition-colors">
+              Submissão
+            </a>
             <a href="#contato" className="text-gray-700 hover:text-unespar-blue transition-colors">
               Contato
             </a>
@@ -64,9 +67,6 @@ const Header = () => {
                   <DialogContent className="sm:max-w-md">
                     <DialogHeader>
                       <DialogTitle>Submeter Trabalho</DialogTitle>
-                      <DialogDescription>
-                        Preencha o formulário para submeter seu trabalho ao simpósio
-                      </DialogDescription>
                     </DialogHeader>
                     <SubmitWorkModal onClose={() => setSubmitWorkOpen(false)} />
                   </DialogContent>
@@ -85,9 +85,6 @@ const Header = () => {
                   <DialogContent className="sm:max-w-md">
                     <DialogHeader>
                       <DialogTitle>Configurações do Usuário</DialogTitle>
-                      <DialogDescription>
-                        Gerencie suas informações pessoais
-                      </DialogDescription>
                     </DialogHeader>
                     <UserSettingsModal onClose={() => setSettingsOpen(false)} />
                   </DialogContent>
@@ -113,9 +110,6 @@ const Header = () => {
                   <DialogContent className="sm:max-w-md">
                     <DialogHeader>
                       <DialogTitle>Fazer Login</DialogTitle>
-                      <DialogDescription>
-                        Entre com suas credenciais para acessar o sistema
-                      </DialogDescription>
                     </DialogHeader>
                     <LoginForm onClose={() => setLoginOpen(false)} />
                   </DialogContent>
@@ -130,9 +124,6 @@ const Header = () => {
                   <DialogContent className="sm:max-w-md">
                     <DialogHeader>
                       <DialogTitle>Cadastrar-se</DialogTitle>
-                      <DialogDescription>
-                        Crie sua conta para participar do simpósio
-                      </DialogDescription>
                     </DialogHeader>
                     <RegisterForm onClose={() => setRegisterOpen(false)} />
                   </DialogContent>
@@ -163,6 +154,9 @@ const Header = () => {
               <a href="#programacao" className="text-gray-700 hover:text-unespar-blue transition-colors">
                 Programação
               </a>
+              <a href="#submissao" className="text-gray-700 hover:text-unespar-blue transition-colors">
+                Submissão
+              </a>
               <a href="#contato" className="text-gray-700 hover:text-unespar-blue transition-colors">
                 Contato
               </a>
@@ -182,9 +176,6 @@ const Header = () => {
                       <DialogContent className="sm:max-w-md">
                         <DialogHeader>
                           <DialogTitle>Submeter Trabalho</DialogTitle>
-                          <DialogDescription>
-                            Preencha o formulário para submeter seu trabalho ao simpósio
-                          </DialogDescription>
                         </DialogHeader>
                         <SubmitWorkModal onClose={() => setSubmitWorkOpen(false)} />
                       </DialogContent>
@@ -203,9 +194,6 @@ const Header = () => {
                       <DialogContent className="sm:max-w-md">
                         <DialogHeader>
                           <DialogTitle>Configurações do Usuário</DialogTitle>
-                          <DialogDescription>
-                            Gerencie suas informações pessoais
-                          </DialogDescription>
                         </DialogHeader>
                         <UserSettingsModal onClose={() => setSettingsOpen(false)} />
                       </DialogContent>
@@ -231,9 +219,6 @@ const Header = () => {
                       <DialogContent className="sm:max-w-md">
                         <DialogHeader>
                           <DialogTitle>Fazer Login</DialogTitle>
-                          <DialogDescription>
-                            Entre com suas credenciais para acessar o sistema
-                          </DialogDescription>
                         </DialogHeader>
                         <LoginForm onClose={() => setLoginOpen(false)} />
                       </DialogContent>
@@ -248,9 +233,6 @@ const Header = () => {
                       <DialogContent className="sm:max-w-md">
                         <DialogHeader>
                           <DialogTitle>Cadastrar-se</DialogTitle>
-                          <DialogDescription>
-                            Crie sua conta para participar do simpósio
-                          </DialogDescription>
                         </DialogHeader>
                         <RegisterForm onClose={() => setRegisterOpen(false)} />
                       </DialogContent>
