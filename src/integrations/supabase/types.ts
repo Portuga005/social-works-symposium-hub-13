@@ -9,6 +9,36 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      admin_users: {
+        Row: {
+          ativo: boolean | null
+          created_at: string | null
+          email: string
+          id: string
+          nome: string
+          password_hash: string
+          updated_at: string | null
+        }
+        Insert: {
+          ativo?: boolean | null
+          created_at?: string | null
+          email: string
+          id?: string
+          nome: string
+          password_hash: string
+          updated_at?: string | null
+        }
+        Update: {
+          ativo?: boolean | null
+          created_at?: string | null
+          email?: string
+          id?: string
+          nome?: string
+          password_hash?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       areas_tematicas: {
         Row: {
           ativa: boolean | null
@@ -201,7 +231,15 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      validate_admin_login: {
+        Args: { admin_email: string; admin_password: string }
+        Returns: {
+          id: string
+          email: string
+          nome: string
+          valid: boolean
+        }[]
+      }
     }
     Enums: {
       status_avaliacao: "pendente" | "aprovado" | "rejeitado" | "em_revisao"

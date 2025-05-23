@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
 
 const AdminLogin = () => {
   const [credentials, setCredentials] = useState({ email: '', password: '' });
@@ -18,10 +19,25 @@ const AdminLogin = () => {
     setLoading(true);
 
     try {
-      // Simular login administrativo
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      if (credentials.email === 'admin@unespar.edu.br' && credentials.password === 'admin123') {
+      // Usar a função do Supabase para validar login admin
+      const { data, error } = await supabase.rpc('validate_admin_login', {
+        admin_email: credentials.email,
+        admin_password: credentials.password
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      if (data && data.length > 0 && data[0].valid) {
+        // Armazenar dados do admin no localStorage para manter sessão
+        localStorage.setItem('admin_session', JSON.stringify({
+          id: data[0].id,
+          email: data[0].email,
+          nome: data[0].nome,
+          loginTime: new Date().toISOString()
+        }));
+
         toast({
           title: "Login realizado com sucesso!",
           description: "Redirecionando para o painel administrativo...",
@@ -30,7 +46,8 @@ const AdminLogin = () => {
       } else {
         throw new Error('Credenciais inválidas');
       }
-    } catch (error) {
+    } catch (error: any) {
+      console.error('Erro no login admin:', error);
       toast({
         variant: "destructive",
         title: "Erro no login",
