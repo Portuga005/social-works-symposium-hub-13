@@ -17,7 +17,7 @@ export interface Submission {
   resultado?: 'Aprovado' | 'Reprovado' | 'Em análise';
   feedback?: string;
   professorId?: string;
-  dataAvaliacao?: string; // Added dataAvaliacao field
+  dataAvaliacao?: string;
 }
 
 export interface User {
@@ -28,6 +28,7 @@ export interface User {
   instituicao: string;
   trabalhosSubmetidos: boolean;
   role?: 'admin' | 'professor' | 'user';
+  password?: string; // Added password field for authentication
 }
 
 // Generic get function
@@ -140,32 +141,39 @@ export const getProfessors = (): User[] => {
 
 // Initialize storage with default data
 export const initializeStorage = (): void => {
-  // Clear existing data to ensure only default data is present
-  localStorage.removeItem(STORAGE_KEYS.USERS);
-  localStorage.removeItem(STORAGE_KEYS.CURRENT_USER);
-  localStorage.removeItem(STORAGE_KEYS.SUBMISSIONS);
+  // Check if users already exist before initializing
+  const existingUsers = getUsers();
   
-  // Add default admin
-  saveUser({
-    id: 'admin-1',
-    nome: 'Admin Principal',
-    email: 'admin@unespar.edu.br',
-    cpf: '111.111.111-11',
-    instituicao: 'UNESPAR',
-    trabalhosSubmetidos: false,
-    role: 'admin'
-  });
+  if (existingUsers.length === 0) {
+    // Add default admin
+    saveUser({
+      id: 'admin-1',
+      nome: 'Admin Principal',
+      email: 'admin@unespar.edu.br',
+      cpf: '111.111.111-11',
+      instituicao: 'UNESPAR',
+      trabalhosSubmetidos: false,
+      role: 'admin',
+      password: 'admin123' // Store password for authentication
+    });
+    
+    // Add default professor
+    saveUser({
+      id: 'prof-1',
+      nome: 'Professor A',
+      email: 'profa@unespar.edu.br',
+      cpf: '222.222.222-11',
+      instituicao: 'UNESPAR',
+      trabalhosSubmetidos: false,
+      role: 'professor',
+      password: 'prof123' // Store password for authentication
+    });
+  }
   
-  // Add default professor
-  saveUser({
-    id: 'prof-1',
-    nome: 'Professor A',
-    email: 'profa@unespar.edu.br',
-    cpf: '222.222.222-11',
-    instituicao: 'UNESPAR',
-    trabalhosSubmetidos: false,
-    role: 'professor'
-  });
+  // Initialize submissions if needed
+  if (!localStorage.getItem(STORAGE_KEYS.SUBMISSIONS)) {
+    setItem(STORAGE_KEYS.SUBMISSIONS, []);
+  }
 };
 
 export default {

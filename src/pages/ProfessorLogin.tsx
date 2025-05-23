@@ -4,14 +4,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 
 const ProfessorLogin = () => {
   const [credentials, setCredentials] = useState({ email: '', password: '' });
   const [loading, setLoading] = useState(false);
-  const { toast } = useToast();
   const navigate = useNavigate();
   const { login } = useAuth();
 
@@ -25,8 +24,7 @@ const ProfessorLogin = () => {
       
       // Check if the email is correct for a professor
       if (credentials.email === 'profa@unespar.edu.br') {
-        toast({
-          title: "Login realizado com sucesso!",
+        toast("Login realizado com sucesso!", {
           description: "Redirecionando para o painel de avaliação...",
         });
         navigate('/professor/dashboard');
@@ -34,10 +32,9 @@ const ProfessorLogin = () => {
         throw new Error('Credenciais inválidas');
       }
     } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "Erro no login",
+      toast("Erro no login", {
         description: "Credenciais inválidas. Tente novamente.",
+        variant: "destructive",
       });
     } finally {
       setLoading(false);

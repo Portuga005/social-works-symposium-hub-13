@@ -41,37 +41,34 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     
     try {
       // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise(resolve => setTimeout(resolve, 500));
       
-      // For simplicity, we'll hardcode admin and professor logins
-      // Admin login
-      if (email === 'admin@unespar.edu.br' && password === 'admin123') {
-        const adminUser = storageService.getUsers().find(u => u.email === email);
+      const users = storageService.getUsers();
+      const foundUser = users.find(u => u.email === email && u.password === password);
+      
+      if (foundUser) {
+        // Create a copy without the password field for security
+        const { password: _, ...userWithoutPassword } = foundUser;
         
-        if (adminUser) {
-          setUser(adminUser);
-          storageService.updateCurrentUser(adminUser);
+        setUser(userWithoutPassword as User);
+        storageService.updateCurrentUser(userWithoutPassword as User);
+        
+        // Show success message based on role
+        if (foundUser.role === 'admin') {
           toast.success('Login administrativo realizado com sucesso!');
-          return;
-        }
-      }
-      
-      // Professor login
-      if (email === 'profa@unespar.edu.br' && password === 'prof123') {
-        const professorUser = storageService.getUsers().find(u => u.email === email);
-        
-        if (professorUser) {
-          setUser(professorUser);
-          storageService.updateCurrentUser(professorUser);
+        } else if (foundUser.role === 'professor') {
           toast.success('Login de professor realizado com sucesso!');
-          return;
+        } else {
+          toast.success('Login realizado com sucesso!');
         }
+        return;
       }
       
       throw new Error('Credenciais inválidas');
     } catch (error) {
       toast.error('Erro ao fazer login. Verifique suas credenciais.');
       console.error(error);
+      throw error; // Re-throw to allow catching in the login component
     } finally {
       setLoading(false);
     }
