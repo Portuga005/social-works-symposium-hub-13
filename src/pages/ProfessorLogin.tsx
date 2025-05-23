@@ -6,36 +6,24 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
+import { useProfessorAuth } from '@/contexts/ProfessorAuthContext';
 
 const ProfessorLogin = () => {
   const [credentials, setCredentials] = useState({ email: '', password: '' });
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { login } = useProfessorAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-      // Simular login de professor
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      if (credentials.email.includes('@professor') && credentials.password === 'prof123') {
-        toast({
-          title: "Login realizado com sucesso!",
-          description: "Redirecionando para o painel de avaliação...",
-        });
-        navigate('/professor/dashboard');
-      } else {
-        throw new Error('Credenciais inválidas');
-      }
+      await login(credentials.email, credentials.password);
+      navigate('/professor/dashboard');
     } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "Erro no login",
-        description: "Credenciais inválidas. Tente novamente.",
-      });
+      // Error is already handled in the login function
     } finally {
       setLoading(false);
     }
@@ -90,12 +78,6 @@ const ProfessorLogin = () => {
             <a href="/" className="text-social-orange hover:underline text-sm">
               ← Voltar ao site principal
             </a>
-          </div>
-          
-          <div className="mt-4 p-4 bg-gray-50 rounded-lg">
-            <p className="text-xs text-gray-600 text-center">
-              <strong>Demo:</strong> Use qualquer email com "@professor" e senha "prof123"
-            </p>
           </div>
         </CardContent>
       </Card>

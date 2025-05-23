@@ -273,8 +273,50 @@ export type Database = {
         }
         Returns: string
       }
+      get_admin_statistics: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          total_participantes: number
+          total_trabalhos: number
+          trabalhos_pendentes: number
+          trabalhos_aprovados: number
+          trabalhos_rejeitados: number
+          total_professores: number
+        }[]
+      }
+      get_trabalhos_professor: {
+        Args: { professor_uuid: string }
+        Returns: {
+          trabalho_id: string
+          titulo: string
+          area_tematica: string
+          autor_nome: string
+          autor_email: string
+          data_submissao: string
+          status_avaliacao: string
+          arquivo_nome: string
+        }[]
+      }
+      submit_avaliacao: {
+        Args: {
+          trabalho_uuid: string
+          professor_uuid: string
+          resultado_avaliacao: string
+          comentarios_texto?: string
+        }
+        Returns: boolean
+      }
       validate_admin_login: {
         Args: { admin_email: string; admin_password: string }
+        Returns: {
+          id: string
+          email: string
+          nome: string
+          valid: boolean
+        }[]
+      }
+      validate_professor_login: {
+        Args: { prof_email: string; prof_password: string }
         Returns: {
           id: string
           email: string
