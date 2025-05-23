@@ -1,7 +1,7 @@
 
 import { getItem, setItem, STORAGE_KEYS } from './storageUtils';
 import { Submission } from './types';
-import { getUsers, getCurrentUser, saveUser } from './userService';
+import { getUsers, getCurrentUser, saveUser, updateCurrentUser } from './userService';
 
 // Submission functions
 export const getSubmissions = (): Submission[] => {
