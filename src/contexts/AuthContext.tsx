@@ -1,3 +1,4 @@
+
 import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -36,6 +37,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const fetchUserProfile = async (userId: string) => {
     try {
+      console.log('Buscando perfil do usuário:', userId);
+      
       const { data: profile, error } = await supabase
         .from('profiles')
         .select('*')
@@ -43,13 +46,45 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         .single();
 
       if (error) {
-        console.error('Error fetching profile:', error);
+        console.error('Erro ao buscar perfil:', error);
+        
+        // Se o perfil não existe, criar um novo com base nos dados do auth
+        if (error.code === 'PGRST116') {
+          console.log('Perfil não encontrado, tentando criar...');
+          const { data: authUser } = await supabase.auth.getUser();
+          
+          if (authUser.user) {
+            const newProfile = {
+              id: authUser.user.id,
+              nome: authUser.user.user_metadata?.nome || authUser.user.email?.split('@')[0] || '',
+              email: authUser.user.email || '',
+              cpf: authUser.user.user_metadata?.cpf || null,
+              instituicao: authUser.user.user_metadata?.instituicao || null,
+              tipo_usuario: 'participante' as const
+            };
+
+            const { data: createdProfile, error: createError } = await supabase
+              .from('profiles')
+              .insert(newProfile)
+              .select()
+              .single();
+
+            if (createError) {
+              console.error('Erro ao criar perfil:', createError);
+              return null;
+            }
+
+            console.log('Perfil criado com sucesso:', createdProfile);
+            return createdProfile;
+          }
+        }
         return null;
       }
 
+      console.log('Perfil encontrado:', profile);
       return profile;
     } catch (error) {
-      console.error('Error in fetchUserProfile:', error);
+      console.error('Erro na função fetchUserProfile:', error);
       return null;
     }
   };
@@ -61,6 +96,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        console.log('Auth state change:', event, session?.user?.id);
         setSession(session);
         
         if (session?.user) {
@@ -79,6 +115,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     // Check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log('Sessão existente:', session?.user?.id);
       setSession(session);
       if (session?.user) {
         fetchUserProfile(session.user.id).then(profile => {
@@ -156,7 +193,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       value={{ 
         user, 
         session,
-        isAuthenticated: !!session,
+        isAuthenticated: !!session && !!user,
         loading,
         login,
         logout,
