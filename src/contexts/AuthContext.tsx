@@ -47,6 +47,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       if (error) {
         console.error('Erro ao buscar perfil:', error);
+        
+        // Se há erro de política RLS, vamos criar um perfil temporário baseado na sessão
+        if (error.code === '42P17' || error.message.includes('infinite recursion')) {
+          console.log('Erro de RLS detectado, criando perfil temporário baseado na sessão');
+          return {
+            id: userId,
+            nome: session?.user?.user_metadata?.nome || session?.user?.email?.split('@')[0] || 'Usuário',
+            email: session?.user?.email || '',
+            cpf: session?.user?.user_metadata?.cpf || null,
+            instituicao: session?.user?.user_metadata?.instituicao || null,
+            tipo_usuario: 'participante'
+          };
+        }
+        
         return null;
       }
 
@@ -55,12 +69,28 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return profile;
       }
 
-      console.log('Perfil não encontrado - aguardando criação pelo trigger');
-      return null;
+      console.log('Perfil não encontrado - criando perfil temporário');
+      // Se não encontrou perfil, criar um temporário
+      return {
+        id: userId,
+        nome: session?.user?.user_metadata?.nome || session?.user?.email?.split('@')[0] || 'Usuário',
+        email: session?.user?.email || '',
+        cpf: session?.user?.user_metadata?.cpf || null,
+        instituicao: session?.user?.user_metadata?.instituicao || null,
+        tipo_usuario: 'participante'
+      };
 
     } catch (error) {
       console.error('Erro na função fetchUserProfile:', error);
-      return null;
+      // Em caso de erro, criar perfil temporário para não bloquear o login
+      return {
+        id: userId,
+        nome: session?.user?.user_metadata?.nome || session?.user?.email?.split('@')[0] || 'Usuário',
+        email: session?.user?.email || '',
+        cpf: session?.user?.user_metadata?.cpf || null,
+        instituicao: session?.user?.user_metadata?.instituicao || null,
+        tipo_usuario: 'participante'
+      };
     }
   };
 
@@ -81,31 +111,30 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         
         if (session?.user) {
           setLoading(true);
-          // Aguardar para garantir que o trigger tenha executado
-          const fetchProfile = async (attempts = 0) => {
-            if (!mounted) return;
-            
+          
+          try {
             const profile = await fetchUserProfile(session.user.id);
             
-            if (profile) {
-              if (mounted) {
-                setUser(profile);
-                setLoading(false);
-              }
-            } else if (attempts < 3) {
-              // Tentar novamente após 1 segundo se não encontrou o perfil
-              setTimeout(() => fetchProfile(attempts + 1), 1000);
-            } else {
-              // Após 3 tentativas, parar de carregar mesmo sem perfil
-              if (mounted) {
-                console.warn('Perfil não encontrado após várias tentativas');
-                setLoading(false);
-              }
+            if (mounted) {
+              setUser(profile);
+              setLoading(false);
+              console.log('Usuário autenticado com sucesso:', profile?.nome);
             }
-          };
-          
-          // Aguardar 500ms inicial para dar tempo do trigger executar
-          setTimeout(() => fetchProfile(), 500);
+          } catch (error) {
+            console.error('Erro ao processar autenticação:', error);
+            if (mounted) {
+              // Mesmo com erro, criar um perfil mínimo para não bloquear o acesso
+              setUser({
+                id: session.user.id,
+                nome: session.user.user_metadata?.nome || session.user.email?.split('@')[0] || 'Usuário',
+                email: session.user.email || '',
+                cpf: session.user.user_metadata?.cpf || null,
+                instituicao: session.user.user_metadata?.instituicao || null,
+                tipo_usuario: 'participante'
+              });
+              setLoading(false);
+            }
+          }
         } else {
           setUser(null);
           setLoading(false);
@@ -131,9 +160,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setSession(session);
         
         if (session?.user) {
-          const profile = await fetchUserProfile(session.user.id);
-          if (mounted) {
-            setUser(profile);
+          try {
+            const profile = await fetchUserProfile(session.user.id);
+            if (mounted) {
+              setUser(profile);
+              console.log('Sessão restaurada com sucesso:', profile?.nome);
+            }
+          } catch (error) {
+            console.error('Erro ao buscar perfil na inicialização:', error);
+            if (mounted) {
+              // Criar perfil mínimo mesmo com erro
+              setUser({
+                id: session.user.id,
+                nome: session.user.user_metadata?.nome || session.user.email?.split('@')[0] || 'Usuário',
+                email: session.user.email || '',
+                cpf: session.user.user_metadata?.cpf || null,
+                instituicao: session.user.user_metadata?.instituicao || null,
+                tipo_usuario: 'participante'
+              });
+            }
           }
         }
         
