@@ -24,6 +24,13 @@ const AdminNavigation = ({ activeTab, setActiveTab }: AdminNavigationProps) => {
         >
           Alunos
         </Button>
+        <Button
+          variant={activeTab === 'professores' ? 'default' : 'ghost'}
+          onClick={() => setActiveTab('professores')}
+          className="flex-1"
+        >
+          Professores
+        </Button>
       </div>
     </div>
   );

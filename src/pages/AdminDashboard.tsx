@@ -5,6 +5,7 @@ import AdminNavigation from '@/components/admin/AdminNavigation';
 import StatisticsCards from '@/components/admin/StatisticsCards';
 import SystemSummary from '@/components/admin/SystemSummary';
 import StudentsTable from '@/components/admin/StudentsTable';
+import ProfessoresSection from '@/components/admin/ProfessoresSection';
 import { useAdminStats } from '@/hooks/useAdminStats';
 import { useAdminStudents } from '@/hooks/useAdminStudents';
 
@@ -43,6 +44,10 @@ const AdminDashboard = () => {
             {alunosError && <div className="text-center text-red-500">Erro ao carregar alunos: {alunosError.message}</div>}
             <StudentsTable alunos={alunos} />
           </div>
+        )}
+
+        {activeTab === 'professores' && (
+          <ProfessoresSection />
         )}
       </div>
     </div>
