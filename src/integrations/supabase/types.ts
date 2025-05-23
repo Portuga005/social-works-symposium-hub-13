@@ -264,6 +264,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      check_admin_access: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
+      check_professor_access: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
       create_professor: {
         Args: {
           p_nome: string

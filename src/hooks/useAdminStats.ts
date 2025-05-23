@@ -8,46 +8,34 @@ export const useAdminStats = () => {
     queryFn: async () => {
       console.log('=== BUSCANDO ESTATÍSTICAS ADMIN ===');
       
-      const [profilesResult, trabalhosResult] = await Promise.all([
-        supabase.from('profiles').select('id'),
-        supabase.from('trabalhos').select(`
-          id,
-          status_avaliacao,
-          profiles!trabalhos_user_id_fkey(nome, email, instituicao),
-          areas_tematicas(nome)
-        `)
-      ]);
-
-      console.log('Resultado profiles:', profilesResult);
-      console.log('Resultado trabalhos:', trabalhosResult);
-
-      if (profilesResult.error) {
-        console.error('Erro ao buscar profiles:', profilesResult.error);
-        throw profilesResult.error;
+      // Usar a função existente do banco que já está funcionando
+      const { data: statsData, error: statsError } = await supabase.rpc('get_admin_statistics');
+      
+      if (statsError) {
+        console.error('Erro ao buscar estatísticas:', statsError);
+        throw statsError;
       }
 
-      if (trabalhosResult.error) {
-        console.error('Erro ao buscar trabalhos:', trabalhosResult.error);
-        throw trabalhosResult.error;
-      }
-
-      const totalAlunos = profilesResult.data?.length || 0;
-      const trabalhos = trabalhosResult.data || [];
-      const trabalhoEnviados = trabalhos.length;
-      const trabalhosAprovados = trabalhos.filter(t => t.status_avaliacao === 'aprovado').length;
-      const trabalhosPendentes = trabalhos.filter(t => t.status_avaliacao === 'pendente').length;
-      const trabalhosReprovados = trabalhos.filter(t => t.status_avaliacao === 'rejeitado').length;
-
-      const stats = {
-        totalAlunos,
-        trabalhoEnviados,
-        trabalhosAprovados,
-        trabalhosPendentes,
-        trabalhosReprovados
+      const stats = statsData && statsData.length > 0 ? statsData[0] : {
+        total_participantes: 0,
+        total_trabalhos: 0,
+        trabalhos_pendentes: 0,
+        trabalhos_aprovados: 0,
+        trabalhos_rejeitados: 0,
+        total_professores: 0
       };
 
-      console.log('Estatísticas calculadas:', stats);
-      return stats;
+      // Converter para o formato esperado pelo componente
+      const result = {
+        totalAlunos: Number(stats.total_participantes),
+        trabalhoEnviados: Number(stats.total_trabalhos),
+        trabalhosAprovados: Number(stats.trabalhos_aprovados),
+        trabalhosPendentes: Number(stats.trabalhos_pendentes),
+        trabalhosReprovados: Number(stats.trabalhos_rejeitados)
+      };
+
+      console.log('Estatísticas calculadas:', result);
+      return result;
     }
   });
 };

@@ -8,30 +8,39 @@ export const useAdminStudents = () => {
     queryFn: async () => {
       console.log('=== BUSCANDO ALUNOS ADMIN ===');
       
-      const { data, error } = await supabase
+      // Primeiro, buscar todos os profiles
+      const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
-        .select(`
-          *,
-          trabalhos!trabalhos_user_id_fkey(
-            id,
-            titulo,
-            status_avaliacao,
-            arquivo_url,
-            arquivo_nome
-          )
-        `);
+        .select('*');
 
-      console.log('Resultado query alunos:', { data, error });
-
-      if (error) {
-        console.error('Erro ao buscar alunos:', error);
-        throw error;
+      if (profilesError) {
+        console.error('Erro ao buscar profiles:', profilesError);
+        throw profilesError;
       }
 
-      console.log('Dados brutos dos alunos:', data);
+      // Depois, buscar todos os trabalhos com as informações necessárias
+      const { data: trabalhos, error: trabalhosError } = await supabase
+        .from('trabalhos')
+        .select(`
+          id,
+          titulo,
+          status_avaliacao,
+          arquivo_url,
+          arquivo_nome,
+          user_id
+        `);
 
-      const alunosProcessados = data?.map(profile => {
-        console.log('Processando profile:', profile);
+      if (trabalhosError) {
+        console.error('Erro ao buscar trabalhos:', trabalhosError);
+        throw trabalhosError;
+      }
+
+      console.log('Profiles encontrados:', profiles?.length || 0);
+      console.log('Trabalhos encontrados:', trabalhos?.length || 0);
+
+      // Combinar os dados manualmente
+      const alunosProcessados = profiles?.map(profile => {
+        const trabalhoDoAluno = trabalhos?.find(t => t.user_id === profile.id);
         
         return {
           id: profile.id,
@@ -39,15 +48,15 @@ export const useAdminStudents = () => {
           cpf: profile.cpf ? `${profile.cpf.slice(0, 3)}.${profile.cpf.slice(3, 6)}.***-**` : 'Não informado',
           email: profile.email,
           instituicao: profile.instituicao || 'Não informada',
-          statusTrabalho: profile.trabalhos?.length > 0 ? 'Enviado' : 'Não enviado',
-          resultado: profile.trabalhos?.length > 0 ? 
-            (profile.trabalhos[0].status_avaliacao === 'aprovado' ? 'Aprovado' :
-             profile.trabalhos[0].status_avaliacao === 'rejeitado' ? 'Reprovado' : 'Em análise') : '-',
-          trabalho: profile.trabalhos?.[0] || null
+          statusTrabalho: trabalhoDoAluno ? 'Enviado' : 'Não enviado',
+          resultado: trabalhoDoAluno ? 
+            (trabalhoDoAluno.status_avaliacao === 'aprovado' ? 'Aprovado' :
+             trabalhoDoAluno.status_avaliacao === 'rejeitado' ? 'Reprovado' : 'Em análise') : '-',
+          trabalho: trabalhoDoAluno || null
         };
       }) || [];
 
-      console.log('Alunos processados:', alunosProcessados);
+      console.log('Alunos processados:', alunosProcessados.length);
       return alunosProcessados;
     }
   });
