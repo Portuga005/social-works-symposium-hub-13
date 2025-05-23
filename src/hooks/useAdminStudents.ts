@@ -12,7 +12,7 @@ export const useAdminStudents = () => {
         .from('profiles')
         .select(`
           *,
-          trabalhos(
+          trabalhos!trabalhos_user_id_fkey(
             id,
             titulo,
             status_avaliacao,

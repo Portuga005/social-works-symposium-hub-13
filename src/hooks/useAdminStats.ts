@@ -9,17 +9,17 @@ export const useAdminStats = () => {
       console.log('=== BUSCANDO ESTATÍSTICAS ADMIN ===');
       
       const [profilesResult, trabalhosResult] = await Promise.all([
-        supabase.from('profiles').select('*'),
-        supabase.from('trabalhos').select('*, profiles(nome, email, instituicao), areas_tematicas(nome)')
+        supabase.from('profiles').select('id'),
+        supabase.from('trabalhos').select(`
+          id,
+          status_avaliacao,
+          profiles!trabalhos_user_id_fkey(nome, email, instituicao),
+          areas_tematicas(nome)
+        `)
       ]);
 
       console.log('Resultado profiles:', profilesResult);
-      console.log('Erro profiles:', profilesResult.error);
-      console.log('Dados profiles:', profilesResult.data);
-
       console.log('Resultado trabalhos:', trabalhosResult);
-      console.log('Erro trabalhos:', trabalhosResult.error);
-      console.log('Dados trabalhos:', trabalhosResult.data);
 
       if (profilesResult.error) {
         console.error('Erro ao buscar profiles:', profilesResult.error);
