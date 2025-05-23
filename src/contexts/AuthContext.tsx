@@ -2,7 +2,9 @@
 import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { toast } from 'sonner';
 // Updated import to use the re-exported types
-import storageService, { User } from '@/services/storageService';
+import { User } from '@/services/storage/types';
+import { getCurrentUser, updateCurrentUser, authenticateUser } from '@/services/storage/userService';
+import { initializeStorage, debugStorage } from '@/services/storage/systemService';
 
 type AuthContextType = {
   user: User | null;
@@ -25,14 +27,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     // Initialize storage with only admin and professor users
-    storageService.initializeStorage();
+    initializeStorage();
     
     // Check if user is already logged in
-    const storedUser = storageService.getCurrentUser();
+    const storedUser = getCurrentUser();
+    console.log('AuthContext initialization - Stored user:', storedUser);
     
     if (storedUser) {
       setUser(storedUser);
     }
+    
+    // Debug the storage
+    debugStorage();
     
     setLoading(false);
   }, []);
@@ -41,28 +47,26 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setLoading(true);
     
     try {
-      console.log('Attempting login with:', email, password);
+      console.log('Attempting login with:', email);
       
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 500));
       
-      const users = storageService.getUsers();
-      console.log('Available users:', users);
+      // Use the authenticateUser function
+      const authenticatedUser = authenticateUser(email, password);
+      console.log('Authentication result:', authenticatedUser);
       
-      const foundUser = users.find(u => u.email === email && u.password === password);
-      console.log('Found user?', foundUser);
-      
-      if (foundUser) {
+      if (authenticatedUser) {
         // Create a copy without the password field for security
-        const { password: _, ...userWithoutPassword } = foundUser;
+        const { password: _, ...userWithoutPassword } = authenticatedUser;
         
         setUser(userWithoutPassword as User);
-        storageService.updateCurrentUser(userWithoutPassword as User);
+        updateCurrentUser(userWithoutPassword as User);
         
         // Show success message based on role
-        if (foundUser.role === 'admin') {
+        if (authenticatedUser.role === 'admin') {
           toast.success('Login administrativo realizado com sucesso!');
-        } else if (foundUser.role === 'professor') {
+        } else if (authenticatedUser.role === 'professor') {
           toast.success('Login de professor realizado com sucesso!');
         } else {
           toast.success('Login realizado com sucesso!');
@@ -82,7 +86,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const logout = () => {
     setUser(null);
-    storageService.updateCurrentUser(null);
+    updateCurrentUser(null);
     toast.info('Logout realizado com sucesso');
   };
 
@@ -90,7 +94,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (user) {
       const updatedUser = { ...user, ...data };
       setUser(updatedUser);
-      storageService.updateCurrentUser(updatedUser);
+      updateCurrentUser(updatedUser);
       toast.success('Informações atualizadas com sucesso!');
     }
   };

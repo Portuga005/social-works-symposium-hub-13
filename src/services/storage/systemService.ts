@@ -1,8 +1,14 @@
-import { setItem, STORAGE_KEYS } from './storageUtils';
+import { setItem, getItem, STORAGE_KEYS, isStorageAvailable } from './storageUtils';
+import { User } from './types';
 import { getUsers, getCurrentUser, saveUser } from './userService';
 
 // Clear all data except for the admin and professor users
 export const clearAllDataExceptUsers = (): void => {
+  if (!isStorageAvailable()) {
+    console.error('localStorage is not available');
+    return;
+  }
+
   const users = getUsers();
   
   // Filter to keep only admin and professor users
@@ -26,11 +32,20 @@ export const clearAllDataExceptUsers = (): void => {
 
 // Initialize storage with only admin and professor accounts
 export const initializeStorage = (): void => {
+  if (!isStorageAvailable()) {
+    console.error('localStorage is not available');
+    return;
+  }
+
+  console.log('Initializing storage...');
+  
   // Check if users already exist before initializing
   const existingUsers = getUsers();
   
   // Only initialize if no users exist
   if (existingUsers.length === 0) {
+    console.log('Creating default users...');
+    
     // Add default admin
     saveUser({
       id: 'admin-1',
@@ -54,13 +69,29 @@ export const initializeStorage = (): void => {
       role: 'professor',
       password: 'prof123'
     });
+    
+    console.log('Default users created successfully.');
+  } else {
+    console.log('Users already exist:', existingUsers.length);
   }
   
   // Initialize submissions if needed but with empty array
   if (!localStorage.getItem(STORAGE_KEYS.SUBMISSIONS)) {
     setItem(STORAGE_KEYS.SUBMISSIONS, []);
+    console.log('Submissions initialized with empty array.');
+  }
+};
+
+// Function to check and log all stored data (for debugging)
+export const debugStorage = (): void => {
+  if (!isStorageAvailable()) {
+    console.error('localStorage is not available');
+    return;
   }
   
-  // Clear any fictional data
-  clearAllDataExceptUsers();
+  console.log('===== STORAGE DEBUG =====');
+  console.log('USERS:', getItem(STORAGE_KEYS.USERS, []));
+  console.log('CURRENT_USER:', getItem(STORAGE_KEYS.CURRENT_USER, null));
+  console.log('SUBMISSIONS:', getItem(STORAGE_KEYS.SUBMISSIONS, []));
+  console.log('========================');
 };

@@ -1,12 +1,13 @@
 
-import { STORAGE_KEYS } from './storage/storageUtils';
+import { STORAGE_KEYS, isStorageAvailable } from './storage/storageUtils';
 import { User, Submission } from './storage/types';
 import {
   getUsers, 
   getCurrentUser, 
   saveUser, 
   updateCurrentUser,
-  getProfessors
+  getProfessors,
+  authenticateUser
 } from './storage/userService';
 import {
   getSubmissions,
@@ -15,16 +16,18 @@ import {
   getSubmissionsByProfessor,
   getPendingSubmissions,
   getEvaluatedSubmissions,
-  saveSubmission
+  saveSubmission,
+  debugSubmissions
 } from './storage/submissionService';
 import {
   initializeStorage,
-  clearAllDataExceptUsers
+  clearAllDataExceptUsers,
+  debugStorage
 } from './storage/systemService';
 
 // Re-export types for backward compatibility
 export type { User, Submission };
-export { STORAGE_KEYS };
+export { STORAGE_KEYS, isStorageAvailable };
 
 // Export all functions as a single object to maintain the original API
 export default {
@@ -41,7 +44,11 @@ export default {
   saveSubmission,
   getProfessors,
   initializeStorage,
-  clearAllDataExceptUsers
+  clearAllDataExceptUsers,
+  authenticateUser,
+  debugStorage,
+  debugSubmissions,
+  isStorageAvailable
 };
 
 // Also export individual functions for direct imports
@@ -59,5 +66,8 @@ export {
   saveSubmission,
   getProfessors,
   initializeStorage,
-  clearAllDataExceptUsers
+  clearAllDataExceptUsers,
+  authenticateUser,
+  debugStorage,
+  debugSubmissions
 };

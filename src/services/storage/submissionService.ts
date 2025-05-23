@@ -1,5 +1,5 @@
 
-import { getItem, setItem, STORAGE_KEYS } from './storageUtils';
+import { getItem, setItem, STORAGE_KEYS, isStorageAvailable } from './storageUtils';
 import { Submission } from './types';
 import { getUsers, getCurrentUser, saveUser, updateCurrentUser } from './userService';
 
@@ -34,34 +34,50 @@ export const getEvaluatedSubmissions = (): Submission[] => {
 };
 
 export const saveSubmission = (submission: Submission): void => {
-  const submissions = getSubmissions();
-  const existingSubmissionIndex = submissions.findIndex(s => s.id === submission.id);
-  
-  if (existingSubmissionIndex >= 0) {
-    submissions[existingSubmissionIndex] = submission;
-  } else {
-    submissions.push(submission);
+  if (!isStorageAvailable()) {
+    console.error('localStorage is not available');
+    return;
   }
   
-  setItem(STORAGE_KEYS.SUBMISSIONS, submissions);
-  
-  // Update user status if it's a new submission
-  if (existingSubmissionIndex === -1) {
-    const user = getUsers().find(u => u.id === submission.userId);
-    if (user) {
-      saveUser({
-        ...user,
-        trabalhosSubmetidos: true
-      });
-      
-      // Update current user if it's the same
-      const currentUser = getCurrentUser();
-      if (currentUser && currentUser.id === user.id) {
-        updateCurrentUser({
-          ...currentUser,
+  try {
+    const submissions = getSubmissions();
+    const existingSubmissionIndex = submissions.findIndex(s => s.id === submission.id);
+    
+    if (existingSubmissionIndex >= 0) {
+      submissions[existingSubmissionIndex] = submission;
+    } else {
+      submissions.push(submission);
+    }
+    
+    setItem(STORAGE_KEYS.SUBMISSIONS, submissions);
+    console.log(`Submission ${submission.id} saved successfully`);
+    
+    // Update user status if it's a new submission
+    if (existingSubmissionIndex === -1) {
+      const user = getUsers().find(u => u.id === submission.userId);
+      if (user) {
+        saveUser({
+          ...user,
           trabalhosSubmetidos: true
         });
+        
+        // Update current user if it's the same
+        const currentUser = getCurrentUser();
+        if (currentUser && currentUser.id === user.id) {
+          updateCurrentUser({
+            ...currentUser,
+            trabalhosSubmetidos: true
+          });
+        }
       }
     }
+  } catch (error) {
+    console.error('Error saving submission:', error);
   }
+};
+
+// Debug function to show all submissions
+export const debugSubmissions = (): void => {
+  const submissions = getSubmissions();
+  console.log('All submissions:', submissions);
 };
