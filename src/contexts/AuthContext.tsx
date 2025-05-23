@@ -55,7 +55,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return profile;
       }
 
-      console.log('Perfil não encontrado');
+      console.log('Perfil não encontrado - aguardando criação pelo trigger');
       return null;
 
     } catch (error) {
@@ -81,15 +81,31 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         
         if (session?.user) {
           setLoading(true);
-          // Aguardar um pouco para garantir que o trigger do banco foi executado
-          setTimeout(async () => {
+          // Aguardar para garantir que o trigger tenha executado
+          const fetchProfile = async (attempts = 0) => {
             if (!mounted) return;
+            
             const profile = await fetchUserProfile(session.user.id);
-            if (mounted) {
-              setUser(profile);
-              setLoading(false);
+            
+            if (profile) {
+              if (mounted) {
+                setUser(profile);
+                setLoading(false);
+              }
+            } else if (attempts < 3) {
+              // Tentar novamente após 1 segundo se não encontrou o perfil
+              setTimeout(() => fetchProfile(attempts + 1), 1000);
+            } else {
+              // Após 3 tentativas, parar de carregar mesmo sem perfil
+              if (mounted) {
+                console.warn('Perfil não encontrado após várias tentativas');
+                setLoading(false);
+              }
             }
-          }, 500); // Aumentado para 500ms para dar tempo do trigger executar
+          };
+          
+          // Aguardar 500ms inicial para dar tempo do trigger executar
+          setTimeout(() => fetchProfile(), 500);
         } else {
           setUser(null);
           setLoading(false);
