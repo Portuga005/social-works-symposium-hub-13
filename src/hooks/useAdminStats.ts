@@ -8,7 +8,7 @@ export const useAdminStats = () => {
     queryFn: async () => {
       console.log('=== BUSCANDO ESTATÍSTICAS ADMIN ===');
       
-      // Usar a função existente do banco que já está funcionando
+      // Usar a função RPC que já funciona
       const { data: statsData, error: statsError } = await supabase.rpc('get_admin_statistics');
       
       if (statsError) {
