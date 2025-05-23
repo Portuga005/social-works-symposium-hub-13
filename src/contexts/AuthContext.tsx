@@ -1,6 +1,7 @@
 
 import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { toast } from 'sonner';
+// Updated import to use the re-exported types
 import storageService, { User } from '@/services/storageService';
 
 type AuthContextType = {

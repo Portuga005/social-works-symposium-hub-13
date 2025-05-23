@@ -1,208 +1,51 @@
-// Storage keys
-export const STORAGE_KEYS = {
-  USERS: 'simpUnespar:users',
-  CURRENT_USER: 'simpUnespar:user',
-  SUBMISSIONS: 'simpUnespar:submissions'
-};
 
-// Interface types
-export interface Submission {
-  id: string;
-  userId: string;
-  titulo: string;
-  areaTematica: string;
-  dataEnvio: string;
-  arquivo: string;
-  resultado?: 'Aprovado' | 'Reprovado' | 'Em análise';
-  feedback?: string;
-  professorId?: string;
-  dataAvaliacao?: string;
-}
+import { STORAGE_KEYS } from './storage/storageUtils';
+import { User, Submission } from './storage/types';
+import {
+  getUsers, 
+  getCurrentUser, 
+  saveUser, 
+  updateCurrentUser,
+  getProfessors
+} from './storage/userService';
+import {
+  getSubmissions,
+  getSubmissionById,
+  getSubmissionsByUser,
+  getSubmissionsByProfessor,
+  getPendingSubmissions,
+  getEvaluatedSubmissions,
+  saveSubmission
+} from './storage/submissionService';
+import {
+  initializeStorage,
+  clearAllDataExceptUsers
+} from './storage/systemService';
 
-export interface User {
-  id: string;
-  nome: string;
-  email: string;
-  cpf: string;
-  instituicao: string;
-  trabalhosSubmetidos: boolean;
-  role?: 'admin' | 'professor' | 'user';
-  password?: string; // Added password field for authentication
-}
+// Re-export types for backward compatibility
+export type { User, Submission };
+export { STORAGE_KEYS };
 
-// Generic get function
-const getItem = <T>(key: string, defaultValue: T): T => {
-  const item = localStorage.getItem(key);
-  return item ? JSON.parse(item) : defaultValue;
-};
-
-// Generic set function
-const setItem = <T>(key: string, value: T): void => {
-  localStorage.setItem(key, JSON.stringify(value));
-};
-
-// User functions
-export const getUsers = (): User[] => {
-  return getItem<User[]>(STORAGE_KEYS.USERS, []);
-};
-
-export const getCurrentUser = (): User | null => {
-  return getItem<User | null>(STORAGE_KEYS.CURRENT_USER, null);
-};
-
-export const saveUser = (user: User): void => {
-  const users = getUsers();
-  const existingUserIndex = users.findIndex(u => u.id === user.id);
-  
-  if (existingUserIndex >= 0) {
-    users[existingUserIndex] = user;
-  } else {
-    users.push(user);
-  }
-  
-  setItem(STORAGE_KEYS.USERS, users);
-};
-
-export const updateCurrentUser = (user: User | null): void => {
-  if (user) {
-    saveUser(user);
-  }
-  setItem(STORAGE_KEYS.CURRENT_USER, user);
-};
-
-// Submission functions
-export const getSubmissions = (): Submission[] => {
-  return getItem<Submission[]>(STORAGE_KEYS.SUBMISSIONS, []);
-};
-
-export const getSubmissionById = (id: string): Submission | undefined => {
-  const submissions = getSubmissions();
-  return submissions.find(submission => submission.id === id);
-};
-
-export const getSubmissionsByUser = (userId: string): Submission[] => {
-  const submissions = getSubmissions();
-  return submissions.filter(submission => submission.userId === userId);
-};
-
-export const getSubmissionsByProfessor = (professorId: string): Submission[] => {
-  const submissions = getSubmissions();
-  return submissions.filter(submission => submission.professorId === professorId);
-};
-
-export const getPendingSubmissions = (): Submission[] => {
-  const submissions = getSubmissions();
-  return submissions.filter(submission => !submission.resultado || submission.resultado === 'Em análise');
-};
-
-export const getEvaluatedSubmissions = (): Submission[] => {
-  const submissions = getSubmissions();
-  return submissions.filter(submission => submission.resultado && submission.resultado !== 'Em análise');
-};
-
-export const saveSubmission = (submission: Submission): void => {
-  const submissions = getSubmissions();
-  const existingSubmissionIndex = submissions.findIndex(s => s.id === submission.id);
-  
-  if (existingSubmissionIndex >= 0) {
-    submissions[existingSubmissionIndex] = submission;
-  } else {
-    submissions.push(submission);
-  }
-  
-  setItem(STORAGE_KEYS.SUBMISSIONS, submissions);
-  
-  // Update user status if it's a new submission
-  if (existingSubmissionIndex === -1) {
-    const user = getUsers().find(u => u.id === submission.userId);
-    if (user) {
-      saveUser({
-        ...user,
-        trabalhosSubmetidos: true
-      });
-      
-      // Update current user if it's the same
-      const currentUser = getCurrentUser();
-      if (currentUser && currentUser.id === user.id) {
-        updateCurrentUser({
-          ...currentUser,
-          trabalhosSubmetidos: true
-        });
-      }
-    }
-  }
-};
-
-// Clear all data except for the admin and professor users
-export const clearAllDataExceptUsers = (): void => {
-  const users = getUsers();
-  
-  // Filter to keep only admin and professor users
-  const adminUser = users.find(user => user.email === 'admin@unespar.edu.br');
-  const professorUser = users.find(user => user.email === 'profa@unespar.edu.br');
-  
-  const essentialUsers = [];
-  if (adminUser) essentialUsers.push(adminUser);
-  if (professorUser) essentialUsers.push(professorUser);
-  
-  // Clear all storage except users
-  setItem(STORAGE_KEYS.USERS, essentialUsers);
-  setItem(STORAGE_KEYS.SUBMISSIONS, []);
-  
-  // Clear current user if it's not admin or professor
-  const currentUser = getCurrentUser();
-  if (currentUser && (currentUser.email !== 'admin@unespar.edu.br' && currentUser.email !== 'profa@unespar.edu.br')) {
-    setItem(STORAGE_KEYS.CURRENT_USER, null);
-  }
-};
-
-// Initialize storage with only admin and professor accounts
-export const initializeStorage = (): void => {
-  // Check if users already exist before initializing
-  const existingUsers = getUsers();
-  
-  // Only initialize if no users exist
-  if (existingUsers.length === 0) {
-    // Add default admin
-    saveUser({
-      id: 'admin-1',
-      nome: 'Admin Principal',
-      email: 'admin@unespar.edu.br',
-      cpf: '111.111.111-11',
-      instituicao: 'UNESPAR',
-      trabalhosSubmetidos: false,
-      role: 'admin',
-      password: 'admin123'
-    });
-    
-    // Add default professor
-    saveUser({
-      id: 'prof-1',
-      nome: 'Professor A',
-      email: 'profa@unespar.edu.br',
-      cpf: '222.222.222-11',
-      instituicao: 'UNESPAR',
-      trabalhosSubmetidos: false,
-      role: 'professor',
-      password: 'prof123'
-    });
-  }
-  
-  // Initialize submissions if needed but with empty array
-  if (!localStorage.getItem(STORAGE_KEYS.SUBMISSIONS)) {
-    setItem(STORAGE_KEYS.SUBMISSIONS, []);
-  }
-  
-  // Clear any fictional data
-  clearAllDataExceptUsers();
-};
-
-// Professor functions
-export const getProfessors = (): User[] => {
-  return getUsers().filter(user => user.role === 'professor');
-};
-
+// Export all functions as a single object to maintain the original API
 export default {
+  getUsers,
+  getCurrentUser,
+  saveUser,
+  updateCurrentUser,
+  getSubmissions,
+  getSubmissionById,
+  getSubmissionsByUser,
+  getSubmissionsByProfessor,
+  getPendingSubmissions,
+  getEvaluatedSubmissions,
+  saveSubmission,
+  getProfessors,
+  initializeStorage,
+  clearAllDataExceptUsers
+};
+
+// Also export individual functions for direct imports
+export {
   getUsers,
   getCurrentUser,
   saveUser,
