@@ -1,127 +1,286 @@
 
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { FileText, Calendar, CheckCircle, Download } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
+import { Upload, FileText, Edit, Trash2, AlertCircle } from 'lucide-react';
+import SubmitWorkModal from './SubmitWorkModal';
 
 const SubmissionSection = () => {
+  const { user, isAuthenticated } = useAuth();
+  const [trabalho, setTrabalho] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
+  const [showSubmitModal, setShowSubmitModal] = useState(false);
+  const [deletingWork, setDeletingWork] = useState(false);
+
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      fetchUserWork();
+    }
+  }, [isAuthenticated, user]);
+
+  const fetchUserWork = async () => {
+    if (!user) return;
+
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('trabalhos')
+        .select(`
+          *,
+          areas_tematicas (nome)
+        `)
+        .eq('user_id', user.id)
+        .single();
+
+      if (error && error.code !== 'PGRST116') {
+        throw error;
+      }
+
+      setTrabalho(data || null);
+    } catch (error: any) {
+      console.error('Erro ao buscar trabalho:', error);
+      if (error.code !== 'PGRST116') {
+        toast.error('Erro ao carregar trabalho');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteWork = async () => {
+    if (!trabalho || !user) return;
+
+    const confirmed = window.confirm(
+      'Tem certeza que deseja cancelar a submissão? Esta ação não pode ser desfeita.'
+    );
+
+    if (!confirmed) return;
+
+    setDeletingWork(true);
+    try {
+      // Deletar arquivo do storage se existir
+      if (trabalho.arquivo_storage_path) {
+        const { error: storageError } = await supabase.storage
+          .from('trabalhos')
+          .remove([trabalho.arquivo_storage_path]);
+
+        if (storageError) {
+          console.error('Erro ao deletar arquivo:', storageError);
+        }
+      }
+
+      // Deletar trabalho do banco
+      const { error } = await supabase
+        .from('trabalhos')
+        .delete()
+        .eq('id', trabalho.id);
+
+      if (error) throw error;
+
+      setTrabalho(null);
+      toast.success('Submissão cancelada com sucesso');
+
+    } catch (error: any) {
+      console.error('Erro ao deletar trabalho:', error);
+      toast.error('Erro ao cancelar submissão: ' + error.message);
+    } finally {
+      setDeletingWork(false);
+    }
+  };
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'pendente':
+        return <Badge className="bg-yellow-100 text-yellow-800">Em Análise</Badge>;
+      case 'aprovado':
+        return <Badge className="bg-green-100 text-green-800">Aprovado</Badge>;
+      case 'rejeitado':
+        return <Badge className="bg-red-100 text-red-800">Rejeitado</Badge>;
+      default:
+        return <Badge variant="secondary">-</Badge>;
+    }
+  };
+
+  const getTipoLabel = (tipo: string) => {
+    switch (tipo) {
+      case 'resumo_expandido':
+        return 'Resumo Expandido';
+      case 'artigo_completo':
+        return 'Artigo Completo';
+      case 'relato_experiencia':
+        return 'Relato de Experiência';
+      default:
+        return tipo;
+    }
+  };
+
+  if (!isAuthenticated) {
+    return (
+      <section id="submissao" className="py-16 bg-gray-50">
+        <div className="container mx-auto px-4">
+          <Card className="max-w-2xl mx-auto">
+            <CardContent className="text-center py-12">
+              <AlertCircle className="w-12 h-12 text-amber-500 mx-auto mb-4" />
+              <h3 className="text-xl font-semibold mb-2">Login Necessário</h3>
+              <p className="text-gray-600 mb-6">
+                Faça login para submeter seu trabalho ao simpósio.
+              </p>
+              <Button 
+                onClick={() => window.location.href = '/auth'}
+                className="bg-unespar-blue hover:bg-unespar-blue/90"
+              >
+                Fazer Login
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </section>
+    );
+  }
+
   return (
-    <section id="submissao" className="py-20 bg-white">
+    <section id="submissao" className="py-16 bg-gray-50">
       <div className="container mx-auto px-4">
-        <div className="text-center mb-16">
-          <h2 className="text-4xl md:text-5xl font-bold text-unespar-blue mb-4">
+        <div className="text-center mb-12">
+          <h2 className="text-3xl font-bold text-unespar-blue mb-4">
             Submissão de Trabalhos
           </h2>
-          <div className="w-24 h-1 bg-social-orange mx-auto mb-6"></div>
-          <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-            Os trabalhos aprovados serão publicados nos Anais do II Simpósio de Serviço Social da UNESPAR com ISBN digital.
+          <p className="text-gray-600 max-w-2xl mx-auto">
+            Envie seu trabalho para avaliação no II Simpósio de Serviço Social da UNESPAR.
           </p>
         </div>
 
-        <div className="grid lg:grid-cols-2 gap-12 mb-16">
-          <div className="space-y-8">
-            <Card className="border-l-4 border-l-social-orange">
-              <CardHeader>
-                <div className="flex items-center space-x-3">
-                  <Calendar className="w-6 h-6 text-social-orange" />
-                  <CardTitle className="text-unespar-blue">Prazo de Submissão</CardTitle>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <p className="text-2xl font-bold text-social-orange mb-2">20 de Setembro de 2025</p>
-                <p className="text-gray-600">Envie suas produções acadêmicas até esta data pelo site oficial do evento.</p>
+        <div className="max-w-4xl mx-auto">
+          {loading ? (
+            <Card>
+              <CardContent className="text-center py-12">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-unespar-blue mx-auto"></div>
+                <p className="mt-4 text-gray-600">Carregando...</p>
               </CardContent>
             </Card>
-
-            <Card className="border-l-4 border-l-unespar-blue">
+          ) : trabalho ? (
+            <Card>
               <CardHeader>
-                <div className="flex items-center space-x-3">
-                  <FileText className="w-6 h-6 text-unespar-blue" />
-                  <CardTitle className="text-unespar-blue">Tipos de Trabalho</CardTitle>
+                <div className="flex justify-between items-start">
+                  <div>
+                    <CardTitle className="text-xl">{trabalho.titulo}</CardTitle>
+                    <div className="flex items-center gap-4 mt-2">
+                      {getStatusBadge(trabalho.status_avaliacao)}
+                      <span className="text-sm text-gray-600">
+                        {getTipoLabel(trabalho.tipo)}
+                      </span>
+                      <span className="text-sm text-gray-600">
+                        {trabalho.areas_tematicas?.nome}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    {trabalho.status_avaliacao === 'pendente' && (
+                      <>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setShowSubmitModal(true)}
+                        >
+                          <Edit className="w-4 h-4 mr-1" />
+                          Editar
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handleDeleteWork}
+                          disabled={deletingWork}
+                          className="text-red-600 hover:text-red-700"
+                        >
+                          <Trash2 className="w-4 h-4 mr-1" />
+                          {deletingWork ? 'Cancelando...' : 'Cancelar'}
+                        </Button>
+                      </>
+                    )}
+                  </div>
                 </div>
-              </CardHeader>
-              <CardContent>
-                <ul className="space-y-2 text-gray-600">
-                  <li className="flex items-center space-x-2">
-                    <CheckCircle className="w-4 h-4 text-green-500" />
-                    <span>Resumos expandidos</span>
-                  </li>
-                  <li className="flex items-center space-x-2">
-                    <CheckCircle className="w-4 h-4 text-green-500" />
-                    <span>Artigos completos</span>
-                  </li>
-                  <li className="flex items-center space-x-2">
-                    <CheckCircle className="w-4 h-4 text-green-500" />
-                    <span>Relatos de experiência</span>
-                  </li>
-                </ul>
-              </CardContent>
-            </Card>
-          </div>
-
-          <div className="space-y-8">
-            <Card className="border-l-4 border-l-unespar-green">
-              <CardHeader>
-                <CardTitle className="text-unespar-blue">Processo de Avaliação</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  <div className="flex items-start space-x-3">
-                    <div className="w-8 h-8 bg-unespar-green rounded-full flex items-center justify-center text-white font-bold text-sm">1</div>
+                  {trabalho.arquivo_nome && (
+                    <div className="flex items-center space-x-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                      <FileText className="w-5 h-5 text-blue-500" />
+                      <span className="text-sm text-blue-700">
+                        Arquivo: {trabalho.arquivo_nome}
+                      </span>
+                    </div>
+                  )}
+
+                  <div className="grid md:grid-cols-2 gap-4 text-sm">
                     <div>
-                      <h4 className="font-semibold text-unespar-blue">Submissão</h4>
-                      <p className="text-gray-600 text-sm">Envio do trabalho através do sistema</p>
+                      <strong>Data de Submissão:</strong>
+                      <br />
+                      {trabalho.data_submissao 
+                        ? new Date(trabalho.data_submissao).toLocaleDateString('pt-BR')
+                        : '-'
+                      }
+                    </div>
+                    <div>
+                      <strong>Data de Avaliação:</strong>
+                      <br />
+                      {trabalho.data_avaliacao 
+                        ? new Date(trabalho.data_avaliacao).toLocaleDateString('pt-BR')
+                        : 'Aguardando avaliação'
+                      }
                     </div>
                   </div>
-                  <div className="flex items-start space-x-3">
-                    <div className="w-8 h-8 bg-unespar-green rounded-full flex items-center justify-center text-white font-bold text-sm">2</div>
-                    <div>
-                      <h4 className="font-semibold text-unespar-blue">Avaliação</h4>
-                      <p className="text-gray-600 text-sm">Análise por comissão científica especializada</p>
+
+                  {trabalho.observacoes && (
+                    <div className="p-3 bg-gray-50 border rounded-lg">
+                      <strong className="text-sm">Observações:</strong>
+                      <p className="text-sm text-gray-600 mt-1">{trabalho.observacoes}</p>
                     </div>
-                  </div>
-                  <div className="flex items-start space-x-3">
-                    <div className="w-8 h-8 bg-unespar-green rounded-full flex items-center justify-center text-white font-bold text-sm">3</div>
-                    <div>
-                      <h4 className="font-semibold text-unespar-blue">Resultado</h4>
-                      <p className="text-gray-600 text-sm">Comunicação do resultado via e-mail</p>
+                  )}
+
+                  {trabalho.status_avaliacao === 'rejeitado' && (
+                    <div className="mt-4">
+                      <Button
+                        onClick={() => setShowSubmitModal(true)}
+                        className="bg-unespar-blue hover:bg-unespar-blue/90"
+                      >
+                        <Upload className="w-4 h-4 mr-2" />
+                        Reenviar Trabalho
+                      </Button>
                     </div>
-                  </div>
-                  <div className="flex items-start space-x-3">
-                    <div className="w-8 h-8 bg-unespar-green rounded-full flex items-center justify-center text-white font-bold text-sm">4</div>
-                    <div>
-                      <h4 className="font-semibold text-unespar-blue">Apresentação</h4>
-                      <p className="text-gray-600 text-sm">Apresentação durante as sessões temáticas</p>
-                    </div>
-                  </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
-
-            <div className="bg-gray-50 p-6 rounded-lg">
-              <h3 className="text-xl font-bold text-unespar-blue mb-4">Documentos Importantes</h3>
-              <div className="space-y-3">
-                <Button variant="outline" className="w-full justify-start">
-                  <Download className="w-4 h-4 mr-2" />
-                  Edital de Submissão
+          ) : (
+            <Card>
+              <CardContent className="text-center py-12">
+                <Upload className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-xl font-semibold mb-2">Nenhum trabalho enviado</h3>
+                <p className="text-gray-600 mb-6">
+                  Você ainda não enviou nenhum trabalho para o simpósio.
+                </p>
+                <Button
+                  onClick={() => setShowSubmitModal(true)}
+                  className="bg-unespar-blue hover:bg-unespar-blue/90"
+                >
+                  <Upload className="w-4 h-4 mr-2" />
+                  Enviar Trabalho
                 </Button>
-                <Button variant="outline" className="w-full justify-start">
-                  <Download className="w-4 h-4 mr-2" />
-                  Template para Artigos
-                </Button>
-                <Button variant="outline" className="w-full justify-start">
-                  <Download className="w-4 h-4 mr-2" />
-                  Normas de Formatação
-                </Button>
-              </div>
-            </div>
-          </div>
+              </CardContent>
+            </Card>
+          )}
         </div>
 
-        <div className="text-center">
-          <Button size="lg" className="bg-social-orange hover:bg-social-orange/90 px-8 py-4 text-lg">
-            Submeter Trabalho
-          </Button>
-        </div>
+        <SubmitWorkModal
+          open={showSubmitModal}
+          onOpenChange={setShowSubmitModal}
+          onSuccess={fetchUserWork}
+          existingWork={trabalho}
+        />
       </div>
     </section>
   );

@@ -1,8 +1,8 @@
-
 import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { seedAreasTemáticas } from '@/utils/seedData';
 
 type UserProfile = {
   id: string;
@@ -55,6 +55,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   useEffect(() => {
+    // Seed áreas temáticas quando o app inicializar
+    seedAreasTemáticas();
+
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
