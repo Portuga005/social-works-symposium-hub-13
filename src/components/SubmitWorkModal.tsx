@@ -138,11 +138,11 @@ const SubmitWorkModal = ({ open, onOpenChange, onSuccess, existingWork }: Submit
     try {
       let workData = {
         titulo: formData.titulo,
-        tipo: formData.tipo,
+        tipo: formData.tipo as 'resumo_expandido' | 'artigo_completo' | 'relato_experiencia',
         area_tematica_id: formData.area_tematica_id,
         user_id: user.id,
         data_submissao: new Date().toISOString(),
-        status_avaliacao: 'pendente'
+        status_avaliacao: 'pendente' as 'pendente' | 'aprovado' | 'rejeitado' | 'em_revisao'
       };
 
       let workId: string;
@@ -160,7 +160,7 @@ const SubmitWorkModal = ({ open, onOpenChange, onSuccess, existingWork }: Submit
         // Criar novo trabalho
         const { data: newWork, error: insertError } = await supabase
           .from('trabalhos')
-          .insert([workData])
+          .insert(workData)
           .select()
           .single();
 

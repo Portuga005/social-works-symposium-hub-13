@@ -7,7 +7,7 @@ import { RegisterForm } from './RegisterForm';
 import { Menu, X, User, LogOut, FileText, Settings } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { UserSettingsModal } from './UserSettingsModal';
-import { SubmitWorkModal } from './SubmitWorkModal';
+import SubmitWorkModal from './SubmitWorkModal';
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -16,6 +16,15 @@ const Header = () => {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [submitWorkOpen, setSubmitWorkOpen] = useState(false);
   const { isAuthenticated, logout } = useAuth();
+
+  const handleSubmitWorkSuccess = () => {
+    setSubmitWorkOpen(false);
+    // Scroll para a seção de submissão para mostrar o trabalho enviado
+    const submissionSection = document.getElementById('submissao');
+    if (submissionSection) {
+      submissionSection.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
 
   return (
     <header className="bg-white shadow-lg sticky top-0 z-50">
@@ -55,22 +64,13 @@ const Header = () => {
           <div className="hidden md:flex items-center space-x-3">
             {isAuthenticated ? (
               <>
-                <Dialog open={submitWorkOpen} onOpenChange={setSubmitWorkOpen}>
-                  <DialogTrigger asChild>
-                    <Button 
-                      className="flex items-center space-x-2 bg-social-orange hover:bg-social-orange/90"
-                    >
-                      <FileText className="w-4 h-4" />
-                      <span>Submeter Trabalho</span>
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="sm:max-w-md">
-                    <DialogHeader>
-                      <DialogTitle>Submeter Trabalho</DialogTitle>
-                    </DialogHeader>
-                    <SubmitWorkModal onClose={() => setSubmitWorkOpen(false)} />
-                  </DialogContent>
-                </Dialog>
+                <Button 
+                  onClick={() => setSubmitWorkOpen(true)}
+                  className="flex items-center space-x-2 bg-social-orange hover:bg-social-orange/90"
+                >
+                  <FileText className="w-4 h-4" />
+                  <span>Submeter Trabalho</span>
+                </Button>
 
                 <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
                   <DialogTrigger asChild>
@@ -164,22 +164,13 @@ const Header = () => {
               <div className="flex flex-col space-y-2 pt-4">
                 {isAuthenticated ? (
                   <>
-                    <Dialog open={submitWorkOpen} onOpenChange={setSubmitWorkOpen}>
-                      <DialogTrigger asChild>
-                        <Button 
-                          className="flex items-center justify-start space-x-2 bg-social-orange hover:bg-social-orange/90"
-                        >
-                          <FileText className="w-4 h-4" />
-                          <span>Submeter Trabalho</span>
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent className="sm:max-w-md">
-                        <DialogHeader>
-                          <DialogTitle>Submeter Trabalho</DialogTitle>
-                        </DialogHeader>
-                        <SubmitWorkModal onClose={() => setSubmitWorkOpen(false)} />
-                      </DialogContent>
-                    </Dialog>
+                    <Button 
+                      onClick={() => setSubmitWorkOpen(true)}
+                      className="flex items-center justify-start space-x-2 bg-social-orange hover:bg-social-orange/90"
+                    >
+                      <FileText className="w-4 h-4" />
+                      <span>Submeter Trabalho</span>
+                    </Button>
 
                     <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
                       <DialogTrigger asChild>
@@ -244,6 +235,12 @@ const Header = () => {
           </div>
         )}
       </div>
+
+      <SubmitWorkModal
+        open={submitWorkOpen}
+        onOpenChange={setSubmitWorkOpen}
+        onSuccess={handleSubmitWorkSuccess}
+      />
     </header>
   );
 };
