@@ -264,6 +264,15 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      create_professor: {
+        Args: {
+          p_nome: string
+          p_email: string
+          p_senha: string
+          p_especialidade?: string
+        }
+        Returns: string
+      }
       validate_admin_login: {
         Args: { admin_email: string; admin_password: string }
         Returns: {
