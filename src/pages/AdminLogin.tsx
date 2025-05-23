@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -34,7 +33,6 @@ const AdminLogin = () => {
     } catch (error) {
       toast("Erro no login", {
         description: "Credenciais inválidas. Tente novamente.",
-        variant: "destructive",
       });
     } finally {
       setLoading(false);
