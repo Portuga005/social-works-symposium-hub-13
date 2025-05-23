@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,22 +19,21 @@ const ProfessorLogin = () => {
     setLoading(true);
 
     try {
+      console.log('Attempting professor login with:', credentials.email);
+      
       // Use the AuthContext login function
       await login(credentials.email, credentials.password);
       
       // Check if the email is correct for a professor
       if (credentials.email === 'profa@unespar.edu.br') {
-        toast("Login realizado com sucesso!", {
-          description: "Redirecionando para o painel de avaliação...",
-        });
+        toast.success("Login realizado com sucesso! Redirecionando para o painel de avaliação...");
         navigate('/professor/dashboard');
       } else {
         throw new Error('Credenciais inválidas');
       }
     } catch (error) {
-      toast("Erro no login", {
-        description: "Credenciais inválidas. Tente novamente.",
-      });
+      toast.error("Credenciais inválidas. Tente novamente.");
+      console.error(error);
     } finally {
       setLoading(false);
     }

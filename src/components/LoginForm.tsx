@@ -21,7 +21,10 @@ export const LoginForm = ({ onClose }: LoginFormProps) => {
     setLoading(true);
 
     try {
+      console.log('Attempting regular login with:', email);
+      
       await login(email, password);
+      toast.success('Login realizado com sucesso!');
       onClose();
     } catch (error) {
       toast.error('Falha no login. Verifique suas credenciais.');

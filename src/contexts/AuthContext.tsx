@@ -40,11 +40,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setLoading(true);
     
     try {
+      console.log('Attempting login with:', email, password);
+      
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 500));
       
       const users = storageService.getUsers();
+      console.log('Available users:', users);
+      
       const foundUser = users.find(u => u.email === email && u.password === password);
+      console.log('Found user?', foundUser);
       
       if (foundUser) {
         // Create a copy without the password field for security

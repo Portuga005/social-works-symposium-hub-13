@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,22 +19,21 @@ const AdminLogin = () => {
     setLoading(true);
 
     try {
+      console.log('Attempting admin login with:', credentials.email);
+      
       // Use the AuthContext login function
       await login(credentials.email, credentials.password);
       
       // Check if the email is correct for an admin
       if (credentials.email === 'admin@unespar.edu.br') {
-        toast("Login realizado com sucesso!", {
-          description: "Redirecionando para o painel administrativo...",
-        });
+        toast.success("Login realizado com sucesso! Redirecionando para o painel administrativo...");
         navigate('/admin/dashboard');
       } else {
         throw new Error('Credenciais inválidas');
       }
     } catch (error) {
-      toast("Erro no login", {
-        description: "Credenciais inválidas. Tente novamente.",
-      });
+      toast.error("Credenciais inválidas. Tente novamente.");
+      console.error(error);
     } finally {
       setLoading(false);
     }

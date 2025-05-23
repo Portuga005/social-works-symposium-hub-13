@@ -1,7 +1,7 @@
 
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from '@/components/ui/dialog';
 import { LoginForm } from './LoginForm';
 import { RegisterForm } from './RegisterForm';
 import { Menu, X, LogOut, FileText, Settings } from 'lucide-react';
@@ -64,6 +64,9 @@ const Header = () => {
                   <DialogContent className="sm:max-w-md">
                     <DialogHeader>
                       <DialogTitle>Submeter Trabalho</DialogTitle>
+                      <DialogDescription>
+                        Preencha o formulário para submeter seu trabalho ao simpósio
+                      </DialogDescription>
                     </DialogHeader>
                     <SubmitWorkModal onClose={() => setSubmitWorkOpen(false)} />
                   </DialogContent>
@@ -82,6 +85,9 @@ const Header = () => {
                   <DialogContent className="sm:max-w-md">
                     <DialogHeader>
                       <DialogTitle>Configurações do Usuário</DialogTitle>
+                      <DialogDescription>
+                        Gerencie suas informações pessoais
+                      </DialogDescription>
                     </DialogHeader>
                     <UserSettingsModal onClose={() => setSettingsOpen(false)} />
                   </DialogContent>
@@ -107,6 +113,9 @@ const Header = () => {
                   <DialogContent className="sm:max-w-md">
                     <DialogHeader>
                       <DialogTitle>Fazer Login</DialogTitle>
+                      <DialogDescription>
+                        Entre com suas credenciais para acessar o sistema
+                      </DialogDescription>
                     </DialogHeader>
                     <LoginForm onClose={() => setLoginOpen(false)} />
                   </DialogContent>
@@ -121,6 +130,9 @@ const Header = () => {
                   <DialogContent className="sm:max-w-md">
                     <DialogHeader>
                       <DialogTitle>Cadastrar-se</DialogTitle>
+                      <DialogDescription>
+                        Crie sua conta para participar do simpósio
+                      </DialogDescription>
                     </DialogHeader>
                     <RegisterForm onClose={() => setRegisterOpen(false)} />
                   </DialogContent>
@@ -170,6 +182,9 @@ const Header = () => {
                       <DialogContent className="sm:max-w-md">
                         <DialogHeader>
                           <DialogTitle>Submeter Trabalho</DialogTitle>
+                          <DialogDescription>
+                            Preencha o formulário para submeter seu trabalho ao simpósio
+                          </DialogDescription>
                         </DialogHeader>
                         <SubmitWorkModal onClose={() => setSubmitWorkOpen(false)} />
                       </DialogContent>
@@ -188,6 +203,9 @@ const Header = () => {
                       <DialogContent className="sm:max-w-md">
                         <DialogHeader>
                           <DialogTitle>Configurações do Usuário</DialogTitle>
+                          <DialogDescription>
+                            Gerencie suas informações pessoais
+                          </DialogDescription>
                         </DialogHeader>
                         <UserSettingsModal onClose={() => setSettingsOpen(false)} />
                       </DialogContent>
@@ -213,6 +231,9 @@ const Header = () => {
                       <DialogContent className="sm:max-w-md">
                         <DialogHeader>
                           <DialogTitle>Fazer Login</DialogTitle>
+                          <DialogDescription>
+                            Entre com suas credenciais para acessar o sistema
+                          </DialogDescription>
                         </DialogHeader>
                         <LoginForm onClose={() => setLoginOpen(false)} />
                       </DialogContent>
@@ -227,6 +248,9 @@ const Header = () => {
                       <DialogContent className="sm:max-w-md">
                         <DialogHeader>
                           <DialogTitle>Cadastrar-se</DialogTitle>
+                          <DialogDescription>
+                            Crie sua conta para participar do simpósio
+                          </DialogDescription>
                         </DialogHeader>
                         <RegisterForm onClose={() => setRegisterOpen(false)} />
                       </DialogContent>
