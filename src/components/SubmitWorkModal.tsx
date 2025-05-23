@@ -1,10 +1,11 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Upload, File, AlertTriangle } from 'lucide-react';
 
@@ -12,15 +13,11 @@ interface SubmitWorkModalProps {
   onClose: () => void;
 }
 
-const AREAS_TEMATICAS = [
-  { id: '1', name: 'Fundamentos do Serviço Social' },
-  { id: '2', name: 'Política Social e Trabalho' },
-  { id: '3', name: 'Movimentos Sociais e Cidadania' },
-  { id: '4', name: 'Questão Social e Desigualdade' },
-  { id: '5', name: 'Ética e Direitos Humanos' },
-  { id: '6', name: 'Serviço Social na Saúde' },
-  { id: '7', name: 'Relatos de Experiência Profissional' }
-];
+type AreaTematica = {
+  id: string;
+  nome: string;
+  descricao: string | null;
+};
 
 export const SubmitWorkModal = ({ onClose }: SubmitWorkModalProps) => {
   const { user, updateUserInfo } = useAuth();
@@ -28,11 +25,32 @@ export const SubmitWorkModal = ({ onClose }: SubmitWorkModalProps) => {
   const [formData, setFormData] = useState({
     areaTematica: '',
     titulo: '',
+    tipo: 'resumo_expandido' as 'resumo_expandido' | 'artigo_completo' | 'relato_experiencia',
     arquivo: null as File | null
   });
   
   const [loading, setLoading] = useState(false);
   const [dragActive, setDragActive] = useState(false);
+  const [areasTematicas, setAreasTematicas] = useState<AreaTematica[]>([]);
+
+  useEffect(() => {
+    const fetchAreasTematicas = async () => {
+      const { data, error } = await supabase
+        .from('areas_tematicas')
+        .select('*')
+        .eq('ativa', true)
+        .order('nome');
+
+      if (error) {
+        console.error('Error fetching areas:', error);
+        toast.error('Erro ao carregar áreas temáticas');
+      } else {
+        setAreasTematicas(data || []);
+      }
+    };
+
+    fetchAreasTematicas();
+  }, []);
   
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();
@@ -91,27 +109,45 @@ export const SubmitWorkModal = ({ onClose }: SubmitWorkModalProps) => {
       toast.error('Faça o upload do seu trabalho');
       return;
     }
+
+    if (!user) {
+      toast.error('Você precisa estar logado para submeter um trabalho');
+      return;
+    }
     
     setLoading(true);
     
     try {
-      // Simular envio para API
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      // Atualizar status do usuário
+      // Insert work into database
+      const { error } = await supabase
+        .from('trabalhos')
+        .insert({
+          user_id: user.id,
+          area_tematica_id: formData.areaTematica,
+          titulo: formData.titulo,
+          tipo: formData.tipo,
+          arquivo_nome: formData.arquivo.name,
+          status_avaliacao: 'pendente'
+        });
+
+      if (error) {
+        throw error;
+      }
+
+      // Update user info to reflect work submission
       updateUserInfo({ trabalhosSubmetidos: true });
       
       toast.success('Trabalho enviado com sucesso!');
       onClose();
-    } catch (error) {
-      console.error(error);
-      toast.error('Erro ao enviar o trabalho. Tente novamente.');
+    } catch (error: any) {
+      console.error('Error submitting work:', error);
+      toast.error('Erro ao enviar o trabalho: ' + error.message);
     } finally {
       setLoading(false);
     }
   };
 
-  // Verificar se o usuário já submeteu um trabalho
+  // Check if user has already submitted a work
   if (user?.trabalhosSubmetidos) {
     return (
       <div className="text-center py-6 space-y-4">
@@ -142,11 +178,29 @@ export const SubmitWorkModal = ({ onClose }: SubmitWorkModalProps) => {
             <SelectValue placeholder="Selecione uma área temática" />
           </SelectTrigger>
           <SelectContent>
-            {AREAS_TEMATICAS.map(area => (
+            {areasTematicas.map(area => (
               <SelectItem key={area.id} value={area.id}>
-                {area.name}
+                {area.nome}
               </SelectItem>
             ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div>
+        <Label htmlFor="tipo">Tipo de Trabalho</Label>
+        <Select 
+          value={formData.tipo} 
+          onValueChange={(value: any) => setFormData(prev => ({ ...prev, tipo: value }))}
+          required
+        >
+          <SelectTrigger id="tipo" className="w-full">
+            <SelectValue placeholder="Selecione o tipo de trabalho" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="resumo_expandido">Resumo Expandido</SelectItem>
+            <SelectItem value="artigo_completo">Artigo Completo</SelectItem>
+            <SelectItem value="relato_experiencia">Relato de Experiência</SelectItem>
           </SelectContent>
         </Select>
       </div>

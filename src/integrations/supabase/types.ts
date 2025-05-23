@@ -9,7 +9,193 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      areas_tematicas: {
+        Row: {
+          ativa: boolean | null
+          created_at: string | null
+          descricao: string | null
+          id: string
+          nome: string
+        }
+        Insert: {
+          ativa?: boolean | null
+          created_at?: string | null
+          descricao?: string | null
+          id?: string
+          nome: string
+        }
+        Update: {
+          ativa?: boolean | null
+          created_at?: string | null
+          descricao?: string | null
+          id?: string
+          nome?: string
+        }
+        Relationships: []
+      }
+      avaliacoes: {
+        Row: {
+          avaliador_id: string
+          comentarios: string | null
+          created_at: string | null
+          id: string
+          nota_apresentacao: number | null
+          nota_conteudo: number | null
+          nota_metodologia: number | null
+          recomendacao: Database["public"]["Enums"]["status_avaliacao"]
+          trabalho_id: string
+        }
+        Insert: {
+          avaliador_id: string
+          comentarios?: string | null
+          created_at?: string | null
+          id?: string
+          nota_apresentacao?: number | null
+          nota_conteudo?: number | null
+          nota_metodologia?: number | null
+          recomendacao: Database["public"]["Enums"]["status_avaliacao"]
+          trabalho_id: string
+        }
+        Update: {
+          avaliador_id?: string
+          comentarios?: string | null
+          created_at?: string | null
+          id?: string
+          nota_apresentacao?: number | null
+          nota_conteudo?: number | null
+          nota_metodologia?: number | null
+          recomendacao?: Database["public"]["Enums"]["status_avaliacao"]
+          trabalho_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "avaliacoes_avaliador_id_fkey"
+            columns: ["avaliador_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "avaliacoes_trabalho_id_fkey"
+            columns: ["trabalho_id"]
+            isOneToOne: false
+            referencedRelation: "trabalhos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          cpf: string | null
+          created_at: string | null
+          email: string
+          id: string
+          instituicao: string | null
+          nome: string
+          tipo_usuario: Database["public"]["Enums"]["tipo_usuario"] | null
+          updated_at: string | null
+        }
+        Insert: {
+          cpf?: string | null
+          created_at?: string | null
+          email: string
+          id: string
+          instituicao?: string | null
+          nome: string
+          tipo_usuario?: Database["public"]["Enums"]["tipo_usuario"] | null
+          updated_at?: string | null
+        }
+        Update: {
+          cpf?: string | null
+          created_at?: string | null
+          email?: string
+          id?: string
+          instituicao?: string | null
+          nome?: string
+          tipo_usuario?: Database["public"]["Enums"]["tipo_usuario"] | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      trabalhos: {
+        Row: {
+          area_tematica_id: string
+          arquivo_nome: string | null
+          arquivo_url: string | null
+          avaliado_por: string | null
+          created_at: string | null
+          data_avaliacao: string | null
+          data_submissao: string | null
+          id: string
+          observacoes: string | null
+          status_avaliacao:
+            | Database["public"]["Enums"]["status_avaliacao"]
+            | null
+          tipo: Database["public"]["Enums"]["tipo_trabalho"]
+          titulo: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          area_tematica_id: string
+          arquivo_nome?: string | null
+          arquivo_url?: string | null
+          avaliado_por?: string | null
+          created_at?: string | null
+          data_avaliacao?: string | null
+          data_submissao?: string | null
+          id?: string
+          observacoes?: string | null
+          status_avaliacao?:
+            | Database["public"]["Enums"]["status_avaliacao"]
+            | null
+          tipo: Database["public"]["Enums"]["tipo_trabalho"]
+          titulo: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          area_tematica_id?: string
+          arquivo_nome?: string | null
+          arquivo_url?: string | null
+          avaliado_por?: string | null
+          created_at?: string | null
+          data_avaliacao?: string | null
+          data_submissao?: string | null
+          id?: string
+          observacoes?: string | null
+          status_avaliacao?:
+            | Database["public"]["Enums"]["status_avaliacao"]
+            | null
+          tipo?: Database["public"]["Enums"]["tipo_trabalho"]
+          titulo?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trabalhos_area_tematica_id_fkey"
+            columns: ["area_tematica_id"]
+            isOneToOne: false
+            referencedRelation: "areas_tematicas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "trabalhos_avaliado_por_fkey"
+            columns: ["avaliado_por"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "trabalhos_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -18,7 +204,12 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      status_avaliacao: "pendente" | "aprovado" | "rejeitado" | "em_revisao"
+      tipo_trabalho:
+        | "resumo_expandido"
+        | "artigo_completo"
+        | "relato_experiencia"
+      tipo_usuario: "participante" | "professor" | "admin"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -133,6 +324,14 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      status_avaliacao: ["pendente", "aprovado", "rejeitado", "em_revisao"],
+      tipo_trabalho: [
+        "resumo_expandido",
+        "artigo_completo",
+        "relato_experiencia",
+      ],
+      tipo_usuario: ["participante", "professor", "admin"],
+    },
   },
 } as const

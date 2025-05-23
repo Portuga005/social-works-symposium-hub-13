@@ -3,7 +3,8 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 interface RegisterFormProps {
   onClose: () => void;
@@ -19,7 +20,6 @@ export const RegisterForm = ({ onClose }: RegisterFormProps) => {
     confirmarSenha: ''
   });
   const [loading, setLoading] = useState(false);
-  const { toast } = useToast();
 
   const formatCPF = (value: string) => {
     const numbers = value.replace(/\D/g, '');
@@ -41,31 +41,43 @@ export const RegisterForm = ({ onClose }: RegisterFormProps) => {
     setLoading(true);
 
     if (formData.senha !== formData.confirmarSenha) {
-      toast({
-        variant: "destructive",
-        title: "Erro no cadastro",
-        description: "As senhas não coincidem.",
-      });
+      toast.error('As senhas não coincidem.');
+      setLoading(false);
+      return;
+    }
+
+    if (formData.senha.length < 6) {
+      toast.error('A senha deve ter pelo menos 6 caracteres.');
       setLoading(false);
       return;
     }
 
     try {
-      // Simular cadastro
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      toast({
-        title: "Cadastro realizado com sucesso!",
-        description: "Você já pode fazer login no sistema.",
+      const { error } = await supabase.auth.signUp({
+        email: formData.email,
+        password: formData.senha,
+        options: {
+          data: {
+            nome: formData.nome,
+            instituicao: formData.instituicao,
+            cpf: formData.cpf
+          }
+        }
       });
-      
+
+      if (error) {
+        if (error.message.includes('already registered')) {
+          toast.error('Este e-mail já está cadastrado. Tente fazer login.');
+        } else {
+          toast.error('Erro no cadastro: ' + error.message);
+        }
+        return;
+      }
+
+      toast.success('Cadastro realizado com sucesso! Você já pode fazer login.');
       onClose();
-    } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "Erro no cadastro",
-        description: "Tente novamente mais tarde.",
-      });
+    } catch (error: any) {
+      toast.error('Erro no cadastro: ' + error.message);
     } finally {
       setLoading(false);
     }
