@@ -30,58 +30,6 @@ const AdminDebug = () => {
     }
   };
 
-  const resetAdminPassword = async () => {
-    setLoading(true);
-    try {
-      // Primeiro, vamos atualizar diretamente o admin existente
-      const { data, error } = await supabase
-        .from('admin_users')
-        .update({
-          password_hash: crypt('admin123', gen_salt('bf'))
-        })
-        .eq('email', 'admin@unespar.edu.br')
-        .select();
-
-      if (error) {
-        console.error('Erro ao atualizar senha:', error);
-        alert('Erro ao atualizar senha: ' + error.message);
-      } else {
-        console.log('Senha atualizada:', data);
-        alert('Senha do admin resetada com sucesso!\nEmail: admin@unespar.edu.br\nSenha: admin123');
-        checkAdmins();
-      }
-    } catch (error) {
-      console.error('Erro geral:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const createNewAdmin = async () => {
-    setLoading(true);
-    try {
-      // Tentar inserir um novo admin com senha criptografada
-      const { data, error } = await supabase.rpc('create_admin_user', {
-        admin_email: 'admin@unespar.edu.br',
-        admin_nome: 'Administrador do Sistema',
-        admin_password: 'admin123'
-      });
-
-      if (error) {
-        console.error('Erro ao criar admin via RPC:', error);
-        alert('Erro ao criar admin: ' + error.message);
-      } else {
-        console.log('Admin criado via RPC:', data);
-        alert('Admin criado com sucesso!\nEmail: admin@unespar.edu.br\nSenha: admin123');
-        checkAdmins();
-      }
-    } catch (error) {
-      console.error('Erro geral:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const testLogin = async () => {
     setLoading(true);
     try {
@@ -105,19 +53,74 @@ const AdminDebug = () => {
     }
   };
 
-  const testPasswordHash = async () => {
+  const directInsertAdmin = async () => {
     setLoading(true);
     try {
-      // Testar como a senha está sendo hashada
-      const { data, error } = await supabase.rpc('test_password_hash', {
-        password_input: 'admin123'
-      });
+      // Tentar inserir diretamente com senha simples (para teste)
+      const { data, error } = await supabase
+        .from('admin_users')
+        .insert({
+          email: 'admin@unespar.edu.br',
+          nome: 'Administrador',
+          password_hash: 'admin123', // Senha em texto plano para teste
+          ativo: true
+        })
+        .select();
 
-      console.log('Resultado do hash de senha:', data);
       if (error) {
-        console.error('Erro no teste de hash:', error);
+        console.error('Erro ao inserir admin:', error);
+        alert('Erro ao inserir admin: ' + error.message);
       } else {
-        alert('Hash gerado: ' + JSON.stringify(data));
+        console.log('Admin inserido:', data);
+        alert('Admin criado com sucesso!\nEmail: admin@unespar.edu.br\nSenha: admin123');
+        checkAdmins();
+      }
+    } catch (error) {
+      console.error('Erro geral:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const deleteAllAdmins = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('admin_users')
+        .delete()
+        .neq('id', '00000000-0000-0000-0000-000000000000'); // Delete all except impossible id
+
+      if (error) {
+        console.error('Erro ao deletar admins:', error);
+        alert('Erro ao deletar admins: ' + error.message);
+      } else {
+        console.log('Admins deletados:', data);
+        alert('Todos os admins foram deletados');
+        checkAdmins();
+      }
+    } catch (error) {
+      console.error('Erro geral:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const testDirectSelect = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('admin_users')
+        .select('*')
+        .eq('email', 'admin@unespar.edu.br')
+        .single();
+
+      console.log('Admin encontrado:', data);
+      console.log('Erro (se houver):', error);
+
+      if (error) {
+        alert('Erro na busca: ' + error.message);
+      } else {
+        alert('Admin encontrado: ' + JSON.stringify(data, null, 2));
       }
     } catch (error) {
       console.error('Erro geral:', error);
@@ -137,16 +140,16 @@ const AdminDebug = () => {
             Verificar Admins
           </Button>
           <Button onClick={testLogin} disabled={loading} variant="outline">
-            Testar Login
+            Testar Login RPC
           </Button>
-          <Button onClick={resetAdminPassword} disabled={loading} variant="secondary">
-            Resetar Senha Admin
+          <Button onClick={directInsertAdmin} disabled={loading} variant="secondary">
+            Criar Admin Direto
           </Button>
-          <Button onClick={createNewAdmin} disabled={loading} variant="secondary">
-            Criar Novo Admin (RPC)
+          <Button onClick={testDirectSelect} disabled={loading} variant="secondary">
+            Buscar Admin Específico
           </Button>
-          <Button onClick={testPasswordHash} disabled={loading} variant="ghost">
-            Testar Hash Senha
+          <Button onClick={deleteAllAdmins} disabled={loading} variant="destructive">
+            Deletar Todos Admins
           </Button>
         </div>
         
@@ -163,6 +166,7 @@ const AdminDebug = () => {
           <p>• Email padrão: admin@unespar.edu.br</p>
           <p>• Senha padrão: admin123</p>
           <p>• Verifique o console do navegador para logs detalhados</p>
+          <p>• Use "Criar Admin Direto" para inserir um admin de teste</p>
         </div>
       </CardContent>
     </Card>
