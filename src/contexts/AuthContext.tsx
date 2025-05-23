@@ -35,11 +35,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchUserProfile = async (userId: string) => {
+  const fetchUserProfile = async (userId: string): Promise<UserProfile | null> => {
     try {
       console.log('Buscando perfil do usuário:', userId);
       
-      // Primeiro, tentar buscar o perfil existente
       const { data: profile, error } = await supabase
         .from('profiles')
         .select('*')
@@ -48,7 +47,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       if (error) {
         console.error('Erro ao buscar perfil:', error);
-        // Se há erro na consulta, retornar null
+        
+        // Se o perfil não existe, tentar criar um novo
+        if (error.code === 'PGRST116') {
+          console.log('Perfil não encontrado, criando novo...');
+          return await createUserProfile(userId);
+        }
+        
         return null;
       }
 
@@ -57,12 +62,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return profile;
       }
 
-      // Se não encontrou perfil, tentar criar um novo
+      // Se não encontrou perfil, criar um novo
       console.log('Perfil não encontrado, criando novo...');
+      return await createUserProfile(userId);
+
+    } catch (error) {
+      console.error('Erro na função fetchUserProfile:', error);
+      return null;
+    }
+  };
+
+  const createUserProfile = async (userId: string): Promise<UserProfile | null> => {
+    try {
       const { data: authUser } = await supabase.auth.getUser();
       
-      if (!authUser.user) {
-        console.log('Usuário não autenticado');
+      if (!authUser.user || authUser.user.id !== userId) {
+        console.log('Usuário não autenticado ou ID não confere');
         return null;
       }
 
@@ -90,7 +105,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return createdProfile;
 
     } catch (error) {
-      console.error('Erro na função fetchUserProfile:', error);
+      console.error('Erro na função createUserProfile:', error);
       return null;
     }
   };
@@ -109,9 +124,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         if (!mounted) return;
         
         setSession(session);
-        setLoading(true);
         
         if (session?.user) {
+          setLoading(true);
           // Usar setTimeout para evitar problemas de recursão
           setTimeout(async () => {
             if (!mounted) return;
@@ -186,6 +201,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       toast.success('Login realizado com sucesso!');
     } catch (error: any) {
+      console.error('Erro no login:', error);
       toast.error(error.message || 'Erro ao fazer login. Verifique suas credenciais.');
       throw error;
     } finally {
@@ -225,6 +241,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setUser(updatedUser);
       toast.success('Informações atualizadas com sucesso!');
     } catch (error: any) {
+      console.error('Erro ao atualizar informações:', error);
       toast.error('Erro ao atualizar informações: ' + error.message);
     }
   };
