@@ -10,8 +10,16 @@ import { useAdminStudents } from '@/hooks/useAdminStudents';
 
 const AdminDashboard = () => {
   const [activeTab, setActiveTab] = useState('estatisticas');
-  const { data: stats } = useAdminStats();
-  const { data: alunos } = useAdminStudents();
+  const { data: stats, isLoading: statsLoading, error: statsError } = useAdminStats();
+  const { data: alunos, isLoading: alunosLoading, error: alunosError } = useAdminStudents();
+
+  console.log('=== ADMIN DASHBOARD ===');
+  console.log('Stats:', stats);
+  console.log('Stats loading:', statsLoading);
+  console.log('Stats error:', statsError);
+  console.log('Alunos:', alunos);
+  console.log('Alunos loading:', alunosLoading);
+  console.log('Alunos error:', alunosError);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -22,6 +30,8 @@ const AdminDashboard = () => {
 
         {activeTab === 'estatisticas' && (
           <div className="space-y-8">
+            {statsLoading && <div className="text-center">Carregando estatísticas...</div>}
+            {statsError && <div className="text-center text-red-500">Erro ao carregar estatísticas: {statsError.message}</div>}
             <StatisticsCards stats={stats} />
             <SystemSummary />
           </div>
@@ -29,6 +39,8 @@ const AdminDashboard = () => {
 
         {activeTab === 'alunos' && (
           <div className="space-y-6">
+            {alunosLoading && <div className="text-center">Carregando alunos...</div>}
+            {alunosError && <div className="text-center text-red-500">Erro ao carregar alunos: {alunosError.message}</div>}
             <StudentsTable alunos={alunos} />
           </div>
         )}
