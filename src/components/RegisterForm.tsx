@@ -68,14 +68,16 @@ export const RegisterForm = ({ onClose }: RegisterFormProps) => {
     }
 
     try {
-      const { error } = await supabase.auth.signUp({
+      console.log('Iniciando cadastro para:', formData.email);
+      
+      const { data, error } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.senha,
         options: {
           data: {
             nome: formData.nome,
             instituicao: formData.instituicao,
-            cpf: formData.cpf
+            cpf: formData.cpf.replace(/\D/g, '') // Remove formatação do CPF
           }
         }
       });
@@ -87,17 +89,26 @@ export const RegisterForm = ({ onClose }: RegisterFormProps) => {
           setError('Este e-mail já está cadastrado. Tente fazer login.');
         } else if (error.message.includes('Email rate limit exceeded')) {
           setError('Muitas tentativas de cadastro. Tente novamente em alguns minutos.');
+        } else if (error.message.includes('Invalid email')) {
+          setError('E-mail inválido. Verifique o formato do e-mail.');
         } else {
-          setError(error.message || 'Erro no cadastro. Tente novamente.');
+          setError(`Erro no cadastro: ${error.message}`);
         }
         return;
       }
 
-      toast.success('Cadastro realizado com sucesso! Você já pode fazer login.');
-      onClose();
+      if (data.user) {
+        console.log('Usuário criado com sucesso:', data.user.id);
+        toast.success('Cadastro realizado com sucesso! Você já pode fazer login.');
+        onClose();
+      } else {
+        console.error('Usuário não foi criado');
+        setError('Erro inesperado no cadastro. Tente novamente.');
+      }
+
     } catch (error: any) {
-      console.error('Erro no cadastro:', error);
-      setError('Erro no cadastro: ' + (error.message || 'Tente novamente.'));
+      console.error('Erro inesperado no cadastro:', error);
+      setError('Erro inesperado no cadastro. Tente novamente.');
     } finally {
       setLoading(false);
     }

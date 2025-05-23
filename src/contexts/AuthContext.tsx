@@ -47,13 +47,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       if (error) {
         console.error('Erro ao buscar perfil:', error);
-        
-        // Se o perfil não existe, tentar criar um novo
-        if (error.code === 'PGRST116') {
-          console.log('Perfil não encontrado, criando novo...');
-          return await createUserProfile(userId);
-        }
-        
         return null;
       }
 
@@ -62,50 +55,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return profile;
       }
 
-      // Se não encontrou perfil, criar um novo
-      console.log('Perfil não encontrado, criando novo...');
-      return await createUserProfile(userId);
+      console.log('Perfil não encontrado');
+      return null;
 
     } catch (error) {
       console.error('Erro na função fetchUserProfile:', error);
-      return null;
-    }
-  };
-
-  const createUserProfile = async (userId: string): Promise<UserProfile | null> => {
-    try {
-      const { data: authUser } = await supabase.auth.getUser();
-      
-      if (!authUser.user || authUser.user.id !== userId) {
-        console.log('Usuário não autenticado ou ID não confere');
-        return null;
-      }
-
-      const newProfile = {
-        id: authUser.user.id,
-        nome: authUser.user.user_metadata?.nome || authUser.user.email?.split('@')[0] || '',
-        email: authUser.user.email || '',
-        cpf: authUser.user.user_metadata?.cpf || null,
-        instituicao: authUser.user.user_metadata?.instituicao || null,
-        tipo_usuario: 'participante' as const
-      };
-
-      const { data: createdProfile, error: createError } = await supabase
-        .from('profiles')
-        .insert(newProfile)
-        .select()
-        .single();
-
-      if (createError) {
-        console.error('Erro ao criar perfil:', createError);
-        return null;
-      }
-
-      console.log('Perfil criado com sucesso:', createdProfile);
-      return createdProfile;
-
-    } catch (error) {
-      console.error('Erro na função createUserProfile:', error);
       return null;
     }
   };
@@ -127,7 +81,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         
         if (session?.user) {
           setLoading(true);
-          // Usar setTimeout para evitar problemas de recursão
+          // Aguardar um pouco para garantir que o trigger do banco foi executado
           setTimeout(async () => {
             if (!mounted) return;
             const profile = await fetchUserProfile(session.user.id);
@@ -135,7 +89,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               setUser(profile);
               setLoading(false);
             }
-          }, 100);
+          }, 500); // Aumentado para 500ms para dar tempo do trigger executar
         } else {
           setUser(null);
           setLoading(false);
