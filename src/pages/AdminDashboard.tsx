@@ -1,51 +1,76 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Users, FileText, CheckCircle, Clock, Download, Eye } from 'lucide-react';
+import { useAdminAuth } from '@/contexts/AdminAuthContext';
+import { supabase } from '@/integrations/supabase/client';
+import { useQuery } from '@tanstack/react-query';
 
 const AdminDashboard = () => {
   const [activeTab, setActiveTab] = useState('estatisticas');
+  const { adminUser, logout } = useAdminAuth();
 
-  // Dados simulados
-  const stats = {
-    totalAlunos: 156,
-    trabalhoEnviados: 89,
-    trabalhosAprovados: 23,
-    trabalhosPendentes: 45,
-    trabalhosReprovados: 21
-  };
+  // Buscar estatísticas
+  const { data: stats } = useQuery({
+    queryKey: ['admin-stats'],
+    queryFn: async () => {
+      const [profilesResult, trabalhosResult] = await Promise.all([
+        supabase.from('profiles').select('*'),
+        supabase.from('trabalhos').select('*, profiles(nome, email, instituicao), areas_tematicas(nome)')
+      ]);
 
-  const alunos = [
-    {
-      id: 1,
-      nome: 'Maria Silva Santos',
-      cpf: '123.456.***-**',
-      email: 'maria@email.com',
-      instituicao: 'UNESPAR',
-      statusTrabalho: 'Enviado',
-      resultado: 'Aprovado'
-    },
-    {
-      id: 2,
-      nome: 'João Oliveira Costa',
-      cpf: '987.654.***-**',
-      email: 'joao@email.com',
-      instituicao: 'UEL',
-      statusTrabalho: 'Enviado',
-      resultado: 'Em análise'
-    },
-    {
-      id: 3,
-      nome: 'Ana Paula Ferreira',
-      cpf: '456.789.***-**',
-      email: 'ana@email.com',
-      instituicao: 'UEM',
-      statusTrabalho: 'Não enviado',
-      resultado: '-'
+      const totalAlunos = profilesResult.data?.length || 0;
+      const trabalhos = trabalhosResult.data || [];
+      const trabalhoEnviados = trabalhos.length;
+      const trabalhosAprovados = trabalhos.filter(t => t.status_avaliacao === 'aprovado').length;
+      const trabalhosPendentes = trabalhos.filter(t => t.status_avaliacao === 'pendente').length;
+      const trabalhosReprovados = trabalhos.filter(t => t.status_avaliacao === 'rejeitado').length;
+
+      return {
+        totalAlunos,
+        trabalhoEnviados,
+        trabalhosAprovados,
+        trabalhosPendentes,
+        trabalhosReprovados
+      };
     }
-  ];
+  });
+
+  // Buscar lista de alunos com trabalhos
+  const { data: alunos } = useQuery({
+    queryKey: ['admin-alunos'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select(`
+          *,
+          trabalhos(
+            id,
+            titulo,
+            status_avaliacao,
+            arquivo_url,
+            arquivo_nome
+          )
+        `);
+
+      if (error) throw error;
+
+      return data?.map(profile => ({
+        id: profile.id,
+        nome: profile.nome,
+        cpf: profile.cpf ? `${profile.cpf.slice(0, 3)}.${profile.cpf.slice(3, 6)}.***-**` : 'Não informado',
+        email: profile.email,
+        instituicao: profile.instituicao || 'Não informada',
+        statusTrabalho: profile.trabalhos?.length > 0 ? 'Enviado' : 'Não enviado',
+        resultado: profile.trabalhos?.length > 0 ? 
+          (profile.trabalhos[0].status_avaliacao === 'aprovado' ? 'Aprovado' :
+           profile.trabalhos[0].status_avaliacao === 'rejeitado' ? 'Reprovado' : 'Em análise') : '-',
+        trabalho: profile.trabalhos?.[0] || null
+      })) || [];
+    }
+  });
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -57,6 +82,12 @@ const AdminDashboard = () => {
         return <Badge className="bg-yellow-100 text-yellow-800">Em análise</Badge>;
       default:
         return <Badge variant="secondary">-</Badge>;
+    }
+  };
+
+  const handleDownloadFile = (aluno: any) => {
+    if (aluno.trabalho?.arquivo_url) {
+      window.open(aluno.trabalho.arquivo_url, '_blank');
     }
   };
 
@@ -72,10 +103,12 @@ const AdminDashboard = () => {
               </div>
               <div>
                 <h1 className="text-xl font-bold text-unespar-blue">Painel Administrativo</h1>
-                <p className="text-sm text-gray-600">II Simpósio de Serviço Social</p>
+                <p className="text-sm text-gray-600">
+                  Bem-vindo, {adminUser?.nome} | II Simpósio de Serviço Social
+                </p>
               </div>
             </div>
-            <Button variant="outline" onClick={() => window.location.href = '/'}>
+            <Button variant="outline" onClick={logout}>
               Sair
             </Button>
           </div>
@@ -114,7 +147,7 @@ const AdminDashboard = () => {
                   <Users className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{stats.totalAlunos}</div>
+                  <div className="text-2xl font-bold">{stats?.totalAlunos || 0}</div>
                   <p className="text-xs text-muted-foreground">Cadastrados no sistema</p>
                 </CardContent>
               </Card>
@@ -125,7 +158,7 @@ const AdminDashboard = () => {
                   <FileText className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{stats.trabalhoEnviados}</div>
+                  <div className="text-2xl font-bold">{stats?.trabalhoEnviados || 0}</div>
                   <p className="text-xs text-muted-foreground">Total de submissões</p>
                 </CardContent>
               </Card>
@@ -136,7 +169,7 @@ const AdminDashboard = () => {
                   <CheckCircle className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold text-green-600">{stats.trabalhosAprovados}</div>
+                  <div className="text-2xl font-bold text-green-600">{stats?.trabalhosAprovados || 0}</div>
                   <p className="text-xs text-muted-foreground">Trabalhos aprovados</p>
                 </CardContent>
               </Card>
@@ -147,7 +180,7 @@ const AdminDashboard = () => {
                   <Clock className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold text-yellow-600">{stats.trabalhosPendentes}</div>
+                  <div className="text-2xl font-bold text-yellow-600">{stats?.trabalhosPendentes || 0}</div>
                   <p className="text-xs text-muted-foreground">Aguardando avaliação</p>
                 </CardContent>
               </Card>
@@ -156,45 +189,17 @@ const AdminDashboard = () => {
             {/* Gráfico de Distribuição */}
             <Card>
               <CardHeader>
-                <CardTitle>Distribuição por Área Temática</CardTitle>
+                <CardTitle>Resumo do Sistema</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm">Políticas Públicas</span>
-                    <div className="flex items-center space-x-2">
-                      <div className="w-32 bg-gray-200 rounded-full h-2">
-                        <div className="bg-unespar-blue h-2 rounded-full" style={{ width: '65%' }}></div>
-                      </div>
-                      <span className="text-sm font-medium">26</span>
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm">Direitos Sociais</span>
-                    <div className="flex items-center space-x-2">
-                      <div className="w-32 bg-gray-200 rounded-full h-2">
-                        <div className="bg-social-orange h-2 rounded-full" style={{ width: '45%' }}></div>
-                      </div>
-                      <span className="text-sm font-medium">18</span>
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm">Família e Comunidade</span>
-                    <div className="flex items-center space-x-2">
-                      <div className="w-32 bg-gray-200 rounded-full h-2">
-                        <div className="bg-unespar-green h-2 rounded-full" style={{ width: '55%' }}></div>
-                      </div>
-                      <span className="text-sm font-medium">22</span>
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm">Pesquisa e Metodologia</span>
-                    <div className="flex items-center space-x-2">
-                      <div className="w-32 bg-gray-200 rounded-full h-2">
-                        <div className="bg-purple-500 h-2 rounded-full" style={{ width: '35%' }}></div>
-                      </div>
-                      <span className="text-sm font-medium">14</span>
-                    </div>
+                  <div className="text-center">
+                    <p className="text-sm text-gray-600">
+                      Sistema integrado com Supabase funcionando corretamente
+                    </p>
+                    <p className="text-xs text-gray-500 mt-2">
+                      Dados atualizados em tempo real
+                    </p>
                   </div>
                 </div>
               </CardContent>
@@ -223,7 +228,7 @@ const AdminDashboard = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {alunos.map((aluno) => (
+                      {alunos?.map((aluno) => (
                         <tr key={aluno.id} className="border-b hover:bg-gray-50">
                           <td className="py-3 px-4 font-medium">{aluno.nome}</td>
                           <td className="py-3 px-4 text-gray-600">{aluno.cpf}</td>
@@ -239,13 +244,13 @@ const AdminDashboard = () => {
                           </td>
                           <td className="py-3 px-4">
                             <div className="flex space-x-2">
-                              {aluno.statusTrabalho === 'Enviado' && (
+                              {aluno.statusTrabalho === 'Enviado' && aluno.trabalho && (
                                 <>
-                                  <Button size="sm" variant="outline">
-                                    <Eye className="w-4 h-4 mr-1" />
-                                    Ver
-                                  </Button>
-                                  <Button size="sm" variant="outline">
+                                  <Button 
+                                    size="sm" 
+                                    variant="outline"
+                                    onClick={() => handleDownloadFile(aluno)}
+                                  >
                                     <Download className="w-4 h-4 mr-1" />
                                     Baixar
                                   </Button>
@@ -257,6 +262,11 @@ const AdminDashboard = () => {
                       ))}
                     </tbody>
                   </table>
+                  {(!alunos || alunos.length === 0) && (
+                    <div className="text-center py-8 text-gray-500">
+                      Nenhum aluno cadastrado ainda.
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>

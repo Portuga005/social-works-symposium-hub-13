@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -7,12 +7,21 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
+import { useAdminAuth } from '@/contexts/AdminAuthContext';
 
 const AdminLogin = () => {
   const [credentials, setCredentials] = useState({ email: '', password: '' });
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { setAdminUser, isAdminAuthenticated } = useAdminAuth();
+
+  // Redirecionar se já estiver logado
+  useEffect(() => {
+    if (isAdminAuthenticated) {
+      navigate('/admin/dashboard');
+    }
+  }, [isAdminAuthenticated, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,13 +39,16 @@ const AdminLogin = () => {
       }
 
       if (data && data.length > 0 && data[0].valid) {
-        // Armazenar dados do admin no localStorage para manter sessão
-        localStorage.setItem('admin_session', JSON.stringify({
+        const adminData = {
           id: data[0].id,
           email: data[0].email,
           nome: data[0].nome,
           loginTime: new Date().toISOString()
-        }));
+        };
+
+        // Armazenar dados do admin no localStorage e contexto
+        localStorage.setItem('admin_session', JSON.stringify(adminData));
+        setAdminUser(adminData);
 
         toast({
           title: "Login realizado com sucesso!",
