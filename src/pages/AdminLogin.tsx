@@ -13,7 +13,7 @@ import AdminDebug from '@/components/admin/AdminDebug';
 const AdminLogin = () => {
   const [credentials, setCredentials] = useState({ email: '', password: '' });
   const [loading, setLoading] = useState(false);
-  const [showDebug, setShowDebug] = useState(false);
+  const [showDebug, setShowDebug] = useState(true); // Começar com debug visível
   const { toast } = useToast();
   const navigate = useNavigate();
   const { setAdminUser, isAdminAuthenticated } = useAdminAuth();
@@ -29,7 +29,9 @@ const AdminLogin = () => {
     e.preventDefault();
     setLoading(true);
 
+    console.log('=== INÍCIO DO LOGIN ===');
     console.log('Tentando fazer login com:', credentials.email);
+    console.log('Senha fornecida (comprimento):', credentials.password.length);
 
     try {
       // Usar a função do Supabase para validar login admin
@@ -38,46 +40,61 @@ const AdminLogin = () => {
         admin_password: credentials.password
       });
 
-      console.log('Resposta da validação:', data);
-      console.log('Erro (se houver):', error);
+      console.log('Resposta da função validate_admin_login:', data);
+      console.log('Erro da função (se houver):', error);
 
       if (error) {
         console.error('Erro na função RPC:', error);
         throw error;
       }
 
-      if (data && data.length > 0 && data[0].valid) {
-        const adminData = {
-          id: data[0].id,
-          email: data[0].email,
-          nome: data[0].nome,
-          loginTime: new Date().toISOString()
-        };
+      if (data && data.length > 0) {
+        const adminRecord = data[0];
+        console.log('Registro do admin retornado:', adminRecord);
+        console.log('Campo valid:', adminRecord.valid);
 
-        console.log('Login bem-sucedido, dados do admin:', adminData);
+        if (adminRecord.valid === true) {
+          const adminData = {
+            id: adminRecord.id,
+            email: adminRecord.email,
+            nome: adminRecord.nome,
+            loginTime: new Date().toISOString()
+          };
 
-        // Armazenar dados do admin no localStorage e contexto
-        localStorage.setItem('admin_session', JSON.stringify(adminData));
-        setAdminUser(adminData);
+          console.log('Login bem-sucedido! Dados do admin:', adminData);
 
-        toast({
-          title: "Login realizado com sucesso!",
-          description: "Redirecionando para o painel administrativo...",
-        });
-        navigate('/admin/dashboard');
+          // Armazenar dados do admin no localStorage e contexto
+          localStorage.setItem('admin_session', JSON.stringify(adminData));
+          setAdminUser(adminData);
+
+          toast({
+            title: "Login realizado com sucesso!",
+            description: "Redirecionando para o painel administrativo...",
+          });
+          navigate('/admin/dashboard');
+        } else {
+          console.log('Credenciais inválidas - valid é false');
+          console.log('Dados completos retornados:', data);
+          throw new Error('Credenciais inválidas - senha incorreta');
+        }
       } else {
-        console.log('Credenciais inválidas - dados retornados:', data);
-        throw new Error('Credenciais inválidas');
+        console.log('Nenhum admin encontrado com este email');
+        throw new Error('Admin não encontrado');
       }
     } catch (error: any) {
-      console.error('Erro no login admin:', error);
+      console.error('=== ERRO NO LOGIN ===');
+      console.error('Tipo do erro:', typeof error);
+      console.error('Erro completo:', error);
+      console.error('Mensagem do erro:', error.message);
+      
       toast({
         variant: "destructive",
         title: "Erro no login",
-        description: "Credenciais inválidas. Tente novamente.",
+        description: error.message || "Credenciais inválidas. Tente novamente.",
       });
     } finally {
       setLoading(false);
+      console.log('=== FIM DO LOGIN ===');
     }
   };
 
@@ -139,6 +156,12 @@ const AdminLogin = () => {
               >
                 {showDebug ? 'Ocultar' : 'Mostrar'} Debug
               </Button>
+              
+              {/* Teste rápido */}
+              <div className="text-xs text-gray-500 space-y-1 border-t pt-2">
+                <p><strong>Teste:</strong> admin@unespar.edu.br</p>
+                <p><strong>Senha:</strong> admin123</p>
+              </div>
             </div>
           </CardContent>
         </Card>
