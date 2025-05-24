@@ -9,6 +9,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Upload, FileText, Trash2 } from 'lucide-react';
+import { createStorageBucket } from '@/utils/createStorageBucket';
 
 interface SubmitWorkModalProps {
   open: boolean;
@@ -31,6 +32,9 @@ const SubmitWorkModal = ({ open, onOpenChange, onSuccess, existingWork }: Submit
 
   useEffect(() => {
     if (open) {
+      // Garantir que o bucket existe ao abrir o modal
+      createStorageBucket();
+      
       fetchAreasTemáticas();
       if (existingWork) {
         setFormData({
@@ -58,10 +62,15 @@ const SubmitWorkModal = ({ open, onOpenChange, onSuccess, existingWork }: Submit
         .eq('ativa', true)
         .order('nome');
 
-      if (error) throw error;
+      if (error) {
+        console.error('Erro ao buscar áreas temáticas:', error);
+        toast.error('Erro ao carregar áreas temáticas');
+        return;
+      }
+      
       setAreasTemáticas(data || []);
     } catch (error) {
-      console.error('Erro ao buscar áreas temáticas:', error);
+      console.error('Erro na função fetchAreasTemáticas:', error);
       toast.error('Erro ao carregar áreas temáticas');
     }
   };
@@ -94,28 +103,40 @@ const SubmitWorkModal = ({ open, onOpenChange, onSuccess, existingWork }: Submit
   };
 
   const uploadFile = async (file: File, workId: string) => {
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${workId}.${fileExt}`;
-    const filePath = `${user?.id}/${fileName}`;
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${workId}.${fileExt}`;
+      const filePath = `${user?.id}/${fileName}`;
 
-    const { error: uploadError } = await supabase.storage
-      .from('trabalhos')
-      .upload(filePath, file, {
-        cacheControl: '3600',
-        upsert: true
-      });
+      console.log('Iniciando upload do arquivo:', fileName);
 
-    if (uploadError) {
-      throw new Error(`Erro no upload: ${uploadError.message}`);
+      const { error: uploadError } = await supabase.storage
+        .from('trabalhos')
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: true
+        });
+
+      if (uploadError) {
+        console.error('Erro no upload:', uploadError);
+        throw new Error(`Erro no upload: ${uploadError.message}`);
+      }
+
+      console.log('Upload realizado com sucesso:', filePath);
+      return { filePath, fileName: file.name };
+    } catch (error) {
+      console.error('Erro na função uploadFile:', error);
+      throw error;
     }
-
-    return { filePath, fileName: file.name };
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    console.log('Iniciando submissão do trabalho');
+    
     if (!user?.id) {
+      console.error('Usuário não autenticado');
       toast.error('Usuário não autenticado');
       return;
     }
@@ -133,7 +154,7 @@ const SubmitWorkModal = ({ open, onOpenChange, onSuccess, existingWork }: Submit
     setLoading(true);
 
     try {
-      let workData = {
+      const workData = {
         titulo: formData.titulo,
         tipo: formData.tipo as 'resumo_expandido' | 'artigo_completo' | 'relato_experiencia',
         area_tematica_id: formData.area_tematica_id,
@@ -145,6 +166,8 @@ const SubmitWorkModal = ({ open, onOpenChange, onSuccess, existingWork }: Submit
       let workId: string;
 
       if (existingWork) {
+        console.log('Atualizando trabalho existente:', existingWork.id);
+        
         // Atualizar trabalho existente
         const { error: updateError } = await supabase
           .from('trabalhos')
@@ -152,9 +175,15 @@ const SubmitWorkModal = ({ open, onOpenChange, onSuccess, existingWork }: Submit
           .eq('id', existingWork.id)
           .eq('user_id', user.id);
 
-        if (updateError) throw updateError;
+        if (updateError) {
+          console.error('Erro ao atualizar trabalho:', updateError);
+          throw updateError;
+        }
+        
         workId = existingWork.id;
       } else {
+        console.log('Criando novo trabalho');
+        
         // Criar novo trabalho
         const { data: newWork, error: insertError } = await supabase
           .from('trabalhos')
@@ -162,12 +191,19 @@ const SubmitWorkModal = ({ open, onOpenChange, onSuccess, existingWork }: Submit
           .select()
           .single();
 
-        if (insertError) throw insertError;
+        if (insertError) {
+          console.error('Erro ao inserir trabalho:', insertError);
+          throw insertError;
+        }
+        
         workId = newWork.id;
+        console.log('Novo trabalho criado com ID:', workId);
       }
 
       // Upload do arquivo se fornecido
       if (formData.arquivo) {
+        console.log('Fazendo upload do arquivo...');
+        
         const { filePath, fileName } = await uploadFile(formData.arquivo, workId);
 
         // Atualizar trabalho com informações do arquivo
@@ -179,15 +215,21 @@ const SubmitWorkModal = ({ open, onOpenChange, onSuccess, existingWork }: Submit
           })
           .eq('id', workId);
 
-        if (updateFileError) throw updateFileError;
+        if (updateFileError) {
+          console.error('Erro ao atualizar informações do arquivo:', updateFileError);
+          throw updateFileError;
+        }
+        
+        console.log('Informações do arquivo atualizadas no banco');
       }
 
+      console.log('Trabalho submetido com sucesso');
       toast.success(existingWork ? 'Trabalho atualizado com sucesso!' : 'Trabalho enviado com sucesso!');
       onSuccess();
 
     } catch (error: any) {
       console.error('Erro ao submeter trabalho:', error);
-      toast.error('Erro ao enviar trabalho: ' + error.message);
+      toast.error('Erro ao enviar trabalho: ' + (error.message || 'Erro desconhecido'));
     } finally {
       setLoading(false);
     }

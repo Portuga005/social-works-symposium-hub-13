@@ -8,6 +8,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Upload, FileText, Edit, Trash2, AlertCircle } from 'lucide-react';
 import SubmitWorkModal from './SubmitWorkModal';
+import { createStorageBucket } from '@/utils/createStorageBucket';
 
 const SubmissionSection = () => {
   const { user, isAuthenticated, loading: authLoading } = useAuth();
@@ -17,6 +18,9 @@ const SubmissionSection = () => {
   const [deletingWork, setDeletingWork] = useState(false);
 
   useEffect(() => {
+    // Garantir que o bucket existe ao carregar a seção
+    createStorageBucket();
+    
     if (isAuthenticated && user?.id && !authLoading) {
       fetchUserWork();
     }
@@ -71,14 +75,20 @@ const SubmissionSection = () => {
 
     setDeletingWork(true);
     try {
+      console.log('Deletando trabalho:', trabalho.id);
+      
       // Deletar arquivo do storage se existir
       if (trabalho.arquivo_storage_path) {
+        console.log('Deletando arquivo do storage:', trabalho.arquivo_storage_path);
+        
         const { error: storageError } = await supabase.storage
           .from('trabalhos')
           .remove([trabalho.arquivo_storage_path]);
 
         if (storageError) {
           console.error('Erro ao deletar arquivo:', storageError);
+        } else {
+          console.log('Arquivo deletado do storage com sucesso');
         }
       }
 
@@ -89,8 +99,12 @@ const SubmissionSection = () => {
         .eq('id', trabalho.id)
         .eq('user_id', user.id);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Erro ao deletar trabalho do banco:', error);
+        throw error;
+      }
 
+      console.log('Trabalho deletado com sucesso');
       setTrabalho(null);
       toast.success('Submissão cancelada com sucesso');
 
