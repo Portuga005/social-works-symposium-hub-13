@@ -20,83 +20,53 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     let mounted = true;
 
-    const handleAuthChange = async (event: string, session: Session | null) => {
+    // Função simples para atualizar estado sem queries
+    const handleAuthStateChange = (event: string, session: Session | null) => {
       console.log('Auth state change:', event, session?.user?.id);
       
-      if (!mounted) {
-        console.log('Componente desmontado, ignorando auth change');
-        return;
-      }
+      if (!mounted) return;
 
-      try {
-        setSession(session);
+      setSession(session);
+      
+      if (session?.user) {
+        // Criar perfil básico imediatamente sem consultas
+        const fallbackProfile = createFallbackProfile(session);
+        setUser(fallbackProfile);
+        console.log('Perfil temporário criado:', fallbackProfile.nome);
         
-        if (session?.user) {
-          console.log('Usuário logado, criando perfil');
-          
-          // Primeiro, tentar buscar o perfil existente
-          const { data: existingProfile, error: fetchError } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', session.user.id)
-            .maybeSingle();
+        // Buscar perfil real de forma assíncrona sem bloquear
+        fetchUserProfileAsync(session.user.id);
+      } else {
+        setUser(null);
+      }
+      
+      setLoading(false);
+    };
 
-          if (fetchError) {
-            console.error('Erro ao buscar perfil:', fetchError);
-          }
+    // Função separada para buscar perfil sem interferir com auth state
+    const fetchUserProfileAsync = async (userId: string) => {
+      try {
+        const { data: existingProfile, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', userId)
+          .maybeSingle();
 
-          if (existingProfile) {
-            console.log('Perfil existente encontrado:', existingProfile.nome);
-            setUser(existingProfile);
-          } else {
-            console.log('Criando novo perfil para usuário:', session.user.id);
-            
-            // Criar perfil fallback
-            const fallbackProfile = createFallbackProfile(session);
-            
-            // Tentar inserir no banco de dados
-            const { data: newProfile, error: insertError } = await supabase
-              .from('profiles')
-              .insert([{
-                id: fallbackProfile.id,
-                nome: fallbackProfile.nome,
-                email: fallbackProfile.email,
-                cpf: fallbackProfile.cpf,
-                instituicao: fallbackProfile.instituicao,
-                tipo_usuario: fallbackProfile.tipo_usuario
-              }])
-              .select()
-              .single();
-
-            if (insertError) {
-              console.error('Erro ao inserir perfil:', insertError);
-              // Em caso de erro, usar o perfil fallback
-              setUser(fallbackProfile);
-            } else {
-              console.log('Perfil criado com sucesso:', newProfile.nome);
-              setUser(newProfile);
-            }
-          }
-        } else {
-          console.log('Usuário deslogado');
-          setUser(null);
+        if (existingProfile && mounted) {
+          console.log('Perfil existente encontrado:', existingProfile.nome);
+          setUser(existingProfile);
+        } else if (error) {
+          console.error('Erro ao buscar perfil:', error);
+          // Manter o perfil fallback em caso de erro
         }
       } catch (error) {
-        console.error('Erro no handleAuthChange:', error);
-        if (session?.user) {
-          // Em caso de erro, ainda criar um perfil básico
-          const fallbackProfile = createFallbackProfile(session);
-          setUser(fallbackProfile);
-        }
-      } finally {
-        if (mounted) {
-          setLoading(false);
-        }
+        console.error('Erro na busca do perfil:', error);
+        // Manter o perfil fallback em caso de erro
       }
     };
 
     // Set up auth state listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(handleAuthChange);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(handleAuthStateChange);
 
     // Check for existing session
     const initializeAuth = async () => {
@@ -105,24 +75,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         
         if (error) {
           console.error('Erro ao obter sessão:', error);
-          if (mounted) {
-            setLoading(false);
-          }
+          if (mounted) setLoading(false);
           return;
         }
 
         console.log('Sessão inicial:', session?.user?.id);
         
         if (session?.user && mounted) {
-          await handleAuthChange('INITIAL_SESSION', session);
+          handleAuthStateChange('INITIAL_SESSION', session);
         } else if (mounted) {
           setLoading(false);
         }
       } catch (error) {
         console.error('Erro na inicialização da auth:', error);
-        if (mounted) {
-          setLoading(false);
-        }
+        if (mounted) setLoading(false);
       }
     };
 
