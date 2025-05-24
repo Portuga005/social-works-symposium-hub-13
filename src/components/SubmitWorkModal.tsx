@@ -3,7 +3,6 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { useAuth } from '@/contexts/AuthContext';
@@ -21,7 +20,6 @@ interface SubmitWorkModalProps {
 const SubmitWorkModal = ({ open, onOpenChange, onSuccess, existingWork }: SubmitWorkModalProps) => {
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
-  const [uploading, setUploading] = useState(false);
   const [areasTemáticas, setAreasTemáticas] = useState<any[]>([]);
   
   const [formData, setFormData] = useState({
@@ -111,13 +109,13 @@ const SubmitWorkModal = ({ open, onOpenChange, onSuccess, existingWork }: Submit
       throw new Error(`Erro no upload: ${uploadError.message}`);
     }
 
-    return { filePath, fileName };
+    return { filePath, fileName: file.name };
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!user) {
+    if (!user?.id) {
       toast.error('Usuário não autenticado');
       return;
     }
@@ -133,7 +131,6 @@ const SubmitWorkModal = ({ open, onOpenChange, onSuccess, existingWork }: Submit
     }
 
     setLoading(true);
-    setUploading(true);
 
     try {
       let workData = {
@@ -142,7 +139,7 @@ const SubmitWorkModal = ({ open, onOpenChange, onSuccess, existingWork }: Submit
         area_tematica_id: formData.area_tematica_id,
         user_id: user.id,
         data_submissao: new Date().toISOString(),
-        status_avaliacao: 'pendente' as 'pendente' | 'aprovado' | 'rejeitado' | 'em_revisao'
+        status_avaliacao: 'pendente' as 'pendente' | 'aprovado' | 'rejeitado'
       };
 
       let workId: string;
@@ -152,7 +149,8 @@ const SubmitWorkModal = ({ open, onOpenChange, onSuccess, existingWork }: Submit
         const { error: updateError } = await supabase
           .from('trabalhos')
           .update(workData)
-          .eq('id', existingWork.id);
+          .eq('id', existingWork.id)
+          .eq('user_id', user.id);
 
         if (updateError) throw updateError;
         workId = existingWork.id;
@@ -186,14 +184,12 @@ const SubmitWorkModal = ({ open, onOpenChange, onSuccess, existingWork }: Submit
 
       toast.success(existingWork ? 'Trabalho atualizado com sucesso!' : 'Trabalho enviado com sucesso!');
       onSuccess();
-      onOpenChange(false);
 
     } catch (error: any) {
       console.error('Erro ao submeter trabalho:', error);
       toast.error('Erro ao enviar trabalho: ' + error.message);
     } finally {
       setLoading(false);
-      setUploading(false);
     }
   };
 
@@ -342,7 +338,7 @@ const SubmitWorkModal = ({ open, onOpenChange, onSuccess, existingWork }: Submit
               disabled={loading}
               className="flex-1 bg-unespar-blue hover:bg-unespar-blue/90"
             >
-              {uploading ? 'Enviando...' : existingWork ? 'Atualizar' : 'Enviar Trabalho'}
+              {loading ? 'Enviando...' : existingWork ? 'Atualizar' : 'Enviar Trabalho'}
             </Button>
           </div>
         </form>

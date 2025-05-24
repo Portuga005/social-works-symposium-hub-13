@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -16,14 +17,14 @@ const SubmissionSection = () => {
   const [deletingWork, setDeletingWork] = useState(false);
 
   useEffect(() => {
-    if (isAuthenticated && user && !authLoading) {
+    if (isAuthenticated && user?.id && !authLoading) {
       fetchUserWork();
     }
-  }, [isAuthenticated, user, authLoading]);
+  }, [isAuthenticated, user?.id, authLoading]);
 
   const fetchUserWork = async () => {
-    if (!user) {
-      console.log('Usuário não disponível para buscar trabalho');
+    if (!user?.id) {
+      console.log('ID do usuário não disponível');
       return;
     }
 
@@ -42,25 +43,25 @@ const SubmissionSection = () => {
 
       if (error) {
         console.error('Erro ao buscar trabalho:', error);
+        setTrabalho(null);
         if (error.code !== 'PGRST116') {
           toast.error('Erro ao carregar trabalho');
         }
-        setTrabalho(null);
       } else {
         console.log('Trabalho encontrado:', data);
-        setTrabalho(data || null);
+        setTrabalho(data);
       }
     } catch (error: any) {
       console.error('Erro na função fetchUserWork:', error);
-      toast.error('Erro ao carregar trabalho');
       setTrabalho(null);
+      toast.error('Erro ao carregar trabalho');
     } finally {
       setLoading(false);
     }
   };
 
   const handleDeleteWork = async () => {
-    if (!trabalho || !user) return;
+    if (!trabalho?.id || !user?.id) return;
 
     const confirmed = window.confirm(
       'Tem certeza que deseja cancelar a submissão? Esta ação não pode ser desfeita.'
@@ -85,7 +86,8 @@ const SubmissionSection = () => {
       const { error } = await supabase
         .from('trabalhos')
         .delete()
-        .eq('id', trabalho.id);
+        .eq('id', trabalho.id)
+        .eq('user_id', user.id);
 
       if (error) throw error;
 
@@ -124,6 +126,11 @@ const SubmissionSection = () => {
       default:
         return tipo;
     }
+  };
+
+  const handleModalSuccess = () => {
+    fetchUserWork();
+    setShowSubmitModal(false);
   };
 
   if (authLoading) {
@@ -301,7 +308,7 @@ const SubmissionSection = () => {
         <SubmitWorkModal
           open={showSubmitModal}
           onOpenChange={setShowSubmitModal}
-          onSuccess={fetchUserWork}
+          onSuccess={handleModalSuccess}
           existingWork={trabalho}
         />
       </div>
