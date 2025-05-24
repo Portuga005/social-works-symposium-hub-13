@@ -7,6 +7,7 @@ import { seedAreasTemáticas } from '@/utils/seedData';
 import { AuthContext } from './AuthContext';
 import { UserProfile } from './types';
 import { loginUser, logoutUser, updateUserProfile } from './authService';
+import { createFallbackProfile } from './profileService';
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<UserProfile | null>(null);
@@ -18,19 +19,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     seedAreasTemáticas();
 
     let mounted = true;
-
-    const createUserFromSession = (session: Session): UserProfile => {
-      return {
-        id: session.user.id,
-        nome: session.user.user_metadata?.nome || 
-              session.user.user_metadata?.full_name || 
-              session.user.email?.split('@')[0] || 'Usuário',
-        email: session.user.email || '',
-        cpf: session.user.user_metadata?.cpf || null,
-        instituicao: session.user.user_metadata?.instituicao || null,
-        tipo_usuario: 'participante'
-      };
-    };
 
     const handleAuthChange = async (event: string, session: Session | null) => {
       console.log('Auth state change:', event, session?.user?.id);
@@ -45,9 +33,50 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         
         if (session?.user) {
           console.log('Usuário logado, criando perfil');
-          const userProfile = createUserFromSession(session);
-          setUser(userProfile);
-          console.log('Perfil criado:', userProfile.nome);
+          
+          // Primeiro, tentar buscar o perfil existente
+          const { data: existingProfile, error: fetchError } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', session.user.id)
+            .maybeSingle();
+
+          if (fetchError) {
+            console.error('Erro ao buscar perfil:', fetchError);
+          }
+
+          if (existingProfile) {
+            console.log('Perfil existente encontrado:', existingProfile.nome);
+            setUser(existingProfile);
+          } else {
+            console.log('Criando novo perfil para usuário:', session.user.id);
+            
+            // Criar perfil fallback
+            const fallbackProfile = createFallbackProfile(session);
+            
+            // Tentar inserir no banco de dados
+            const { data: newProfile, error: insertError } = await supabase
+              .from('profiles')
+              .insert([{
+                id: fallbackProfile.id,
+                nome: fallbackProfile.nome,
+                email: fallbackProfile.email,
+                cpf: fallbackProfile.cpf,
+                instituicao: fallbackProfile.instituicao,
+                tipo_usuario: fallbackProfile.tipo_usuario
+              }])
+              .select()
+              .single();
+
+            if (insertError) {
+              console.error('Erro ao inserir perfil:', insertError);
+              // Em caso de erro, usar o perfil fallback
+              setUser(fallbackProfile);
+            } else {
+              console.log('Perfil criado com sucesso:', newProfile.nome);
+              setUser(newProfile);
+            }
+          }
         } else {
           console.log('Usuário deslogado');
           setUser(null);
@@ -56,7 +85,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         console.error('Erro no handleAuthChange:', error);
         if (session?.user) {
           // Em caso de erro, ainda criar um perfil básico
-          const fallbackProfile = createUserFromSession(session);
+          const fallbackProfile = createFallbackProfile(session);
           setUser(fallbackProfile);
         }
       } finally {
@@ -85,13 +114,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         console.log('Sessão inicial:', session?.user?.id);
         
         if (session?.user && mounted) {
-          const userProfile = createUserFromSession(session);
-          setSession(session);
-          setUser(userProfile);
-          console.log('Sessão restaurada:', userProfile.nome);
-        }
-        
-        if (mounted) {
+          await handleAuthChange('INITIAL_SESSION', session);
+        } else if (mounted) {
           setLoading(false);
         }
       } catch (error) {
