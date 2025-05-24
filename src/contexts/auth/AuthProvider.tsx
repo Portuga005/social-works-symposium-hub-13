@@ -6,67 +6,63 @@ import { toast } from 'sonner';
 import { seedAreasTemáticas } from '@/utils/seedData';
 import { AuthContext } from './AuthContext';
 import { UserProfile } from './types';
-import { fetchUserProfile } from './profileService';
 import { loginUser, logoutUser, updateUserProfile } from './authService';
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
-  const [profileFetched, setProfileFetched] = useState(false);
 
   useEffect(() => {
     // Seed áreas temáticas quando o app inicializar
     seedAreasTemáticas();
 
     let mounted = true;
-    let isProcessing = false;
+
+    const createUserFromSession = (session: Session): UserProfile => {
+      return {
+        id: session.user.id,
+        nome: session.user.user_metadata?.nome || 
+              session.user.user_metadata?.full_name || 
+              session.user.email?.split('@')[0] || 'Usuário',
+        email: session.user.email || '',
+        cpf: session.user.user_metadata?.cpf || null,
+        instituicao: session.user.user_metadata?.instituicao || null,
+        tipo_usuario: 'participante'
+      };
+    };
 
     const handleAuthChange = async (event: string, session: Session | null) => {
       console.log('Auth state change:', event, session?.user?.id);
       
-      if (!mounted || isProcessing) {
-        console.log('Ignorando mudança de auth - componente desmontado ou processando');
+      if (!mounted) {
+        console.log('Componente desmontado, ignorando auth change');
         return;
       }
 
-      isProcessing = true;
-      
       try {
         setSession(session);
         
-        if (session?.user && !profileFetched) {
-          console.log('Processando novo usuário logado');
-          setLoading(true);
-          
-          try {
-            const profile = await fetchUserProfile(session.user.id, session);
-            
-            if (mounted) {
-              setUser(profile);
-              setProfileFetched(true);
-              console.log('Usuário autenticado com sucesso:', profile?.nome);
-            }
-          } catch (error) {
-            console.error('Erro ao processar perfil, criando perfil mínimo:', error);
-            if (mounted) {
-              const { createFallbackProfile } = await import('./profileService');
-              const fallbackProfile = createFallbackProfile(session);
-              setUser(fallbackProfile);
-              setProfileFetched(true);
-            }
-          }
-        } else if (!session) {
+        if (session?.user) {
+          console.log('Usuário logado, criando perfil');
+          const userProfile = createUserFromSession(session);
+          setUser(userProfile);
+          console.log('Perfil criado:', userProfile.nome);
+        } else {
           console.log('Usuário deslogado');
           setUser(null);
-          setProfileFetched(false);
         }
-        
+      } catch (error) {
+        console.error('Erro no handleAuthChange:', error);
+        if (session?.user) {
+          // Em caso de erro, ainda criar um perfil básico
+          const fallbackProfile = createUserFromSession(session);
+          setUser(fallbackProfile);
+        }
+      } finally {
         if (mounted) {
           setLoading(false);
         }
-      } finally {
-        isProcessing = false;
       }
     };
 
@@ -86,27 +82,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           return;
         }
 
-        console.log('Sessão existente encontrada:', session?.user?.id);
+        console.log('Sessão inicial:', session?.user?.id);
         
         if (session?.user && mounted) {
-          try {
-            const profile = await fetchUserProfile(session.user.id, session);
-            if (mounted) {
-              setSession(session);
-              setUser(profile);
-              setProfileFetched(true);
-              console.log('Sessão restaurada com sucesso:', profile?.nome);
-            }
-          } catch (error) {
-            console.error('Erro ao buscar perfil na inicialização:', error);
-            if (mounted) {
-              const { createFallbackProfile } = await import('./profileService');
-              const fallbackProfile = createFallbackProfile(session);
-              setSession(session);
-              setUser(fallbackProfile);
-              setProfileFetched(true);
-            }
-          }
+          const userProfile = createUserFromSession(session);
+          setSession(session);
+          setUser(userProfile);
+          console.log('Sessão restaurada:', userProfile.nome);
         }
         
         if (mounted) {
@@ -133,6 +115,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     
     try {
       await loginUser(email, password);
+      // O estado será atualizado automaticamente pelo onAuthStateChange
     } catch (error: any) {
       console.error('Erro no login:', error);
       toast.error(error.message || 'Erro ao fazer login. Verifique suas credenciais.');
@@ -147,7 +130,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       await logoutUser();
       setUser(null);
       setSession(null);
-      setProfileFetched(false);
     } catch (error: any) {
       console.error('Erro no logout:', error);
     }

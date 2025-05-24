@@ -1,6 +1,5 @@
 
 import { Session } from '@supabase/supabase-js';
-import { supabase } from '@/integrations/supabase/client';
 import { UserProfile } from './types';
 
 export const createFallbackProfile = (session: Session): UserProfile => {
@@ -14,35 +13,4 @@ export const createFallbackProfile = (session: Session): UserProfile => {
     instituicao: session.user.user_metadata?.instituicao || null,
     tipo_usuario: 'participante'
   };
-};
-
-export const fetchUserProfile = async (userId: string, userSession: Session): Promise<UserProfile> => {
-  try {
-    console.log('Tentando buscar perfil do usuário:', userId);
-    
-    const { data: profile, error } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', userId)
-      .maybeSingle();
-
-    if (error) {
-      console.error('Erro ao buscar perfil:', error);
-      console.log('Criando perfil temporário devido ao erro');
-      return createFallbackProfile(userSession);
-    }
-
-    if (profile) {
-      console.log('Perfil encontrado:', profile);
-      return profile;
-    }
-
-    console.log('Perfil não encontrado - criando perfil temporário');
-    return createFallbackProfile(userSession);
-
-  } catch (error) {
-    console.error('Erro na função fetchUserProfile:', error);
-    console.log('Criando perfil temporário devido à exceção');
-    return createFallbackProfile(userSession);
-  }
 };

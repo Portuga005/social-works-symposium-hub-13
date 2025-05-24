@@ -29,7 +29,9 @@ export const LoginForm = ({ onClose }: LoginFormProps) => {
     }
 
     try {
+      console.log('Tentando fazer login com:', email);
       await login(email, password);
+      console.log('Login bem-sucedido');
       onClose();
     } catch (error: any) {
       console.error('Erro no login:', error);

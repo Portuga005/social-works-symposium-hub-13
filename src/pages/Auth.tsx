@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { LoginForm } from '@/components/LoginForm';
@@ -8,11 +8,23 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Navigate } from 'react-router-dom';
 
 const Auth = () => {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, loading } = useAuth();
   const [activeTab, setActiveTab] = useState('login');
+
+  console.log('Auth page - isAuthenticated:', isAuthenticated, 'loading:', loading);
+
+  // Show loading while checking auth state
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-unespar-blue to-unespar-green flex items-center justify-center p-4">
+        <div className="text-white text-lg">Carregando...</div>
+      </div>
+    );
+  }
 
   // Redirect authenticated users to home page
   if (isAuthenticated) {
+    console.log('Usuário autenticado, redirecionando para home');
     return <Navigate to="/" replace />;
   }
 
