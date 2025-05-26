@@ -47,14 +47,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const fetchUserProfileAsync = async (userId: string) => {
       try {
         const { data: existingProfile, error } = await supabase
-          .from('profiles')
+          .from('usuarios')
           .select('*')
           .eq('id', userId)
           .maybeSingle();
 
         if (existingProfile && mounted) {
           console.log('Perfil existente encontrado:', existingProfile.nome);
-          setUser(existingProfile);
+          setUser({
+            id: existingProfile.id,
+            nome: existingProfile.nome,
+            email: existingProfile.email,
+            cpf: existingProfile.cpf,
+            instituicao: existingProfile.instituicao,
+            tipo_usuario: existingProfile.tipo_usuario as 'participante' | 'professor' | 'admin'
+          });
         } else if (error) {
           console.error('Erro ao buscar perfil:', error);
           // Manter o perfil fallback em caso de erro

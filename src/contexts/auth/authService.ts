@@ -34,11 +34,12 @@ export const logoutUser = async () => {
 
 export const updateUserProfile = async (user: UserProfile, data: Partial<UserProfile>) => {
   const { error } = await supabase
-    .from('profiles')
+    .from('usuarios')
     .update({
       nome: data.nome,
       cpf: data.cpf,
-      instituicao: data.instituicao
+      instituicao: data.instituicao,
+      updated_at: new Date().toISOString()
     })
     .eq('id', user.id);
 

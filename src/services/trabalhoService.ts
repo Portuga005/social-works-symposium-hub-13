@@ -5,7 +5,7 @@ export interface WorkData {
   titulo: string;
   tipo: 'resumo_expandido' | 'artigo_completo' | 'relato_experiencia';
   area_tematica_id: string;
-  user_id: string;
+  usuario_id: string;
   data_submissao: string;
   status_avaliacao: 'pendente' | 'aprovado' | 'rejeitado';
 }
@@ -15,7 +15,14 @@ export const createWork = async (workData: WorkData) => {
   
   const { data: newWork, error: insertError } = await supabase
     .from('trabalhos')
-    .insert(workData)
+    .insert({
+      titulo: workData.titulo,
+      tipo: workData.tipo,
+      area_tematica_id: workData.area_tematica_id,
+      usuario_id: workData.usuario_id,
+      data_submissao: workData.data_submissao,
+      status_avaliacao: workData.status_avaliacao
+    })
     .select()
     .single();
 
@@ -33,9 +40,14 @@ export const updateWork = async (workId: string, workData: Partial<WorkData>, us
   
   const { error: updateError } = await supabase
     .from('trabalhos')
-    .update(workData)
+    .update({
+      titulo: workData.titulo,
+      tipo: workData.tipo,
+      area_tematica_id: workData.area_tematica_id,
+      updated_at: new Date().toISOString()
+    })
     .eq('id', workId)
-    .eq('user_id', userId);
+    .eq('usuario_id', userId);
 
   if (updateError) {
     console.error('Erro ao atualizar trabalho:', updateError);
@@ -49,8 +61,9 @@ export const updateWorkFileInfo = async (workId: string, filePath: string, fileN
   const { error: updateFileError } = await supabase
     .from('trabalhos')
     .update({
-      arquivo_storage_path: filePath,
-      arquivo_nome: fileName
+      arquivo_path: filePath,
+      arquivo_nome: fileName,
+      updated_at: new Date().toISOString()
     })
     .eq('id', workId);
 

@@ -337,15 +337,6 @@ export type Database = {
         }
         Returns: boolean
       }
-      validate_admin_login: {
-        Args: { admin_email: string; admin_password: string }
-        Returns: {
-          id: string
-          email: string
-          nome: string
-          valid: boolean
-        }[]
-      }
       validate_professor_login: {
         Args: { prof_email: string; prof_password: string }
         Returns: {
