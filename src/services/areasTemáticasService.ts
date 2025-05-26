@@ -7,7 +7,7 @@ export const fetchAreasTemáticas = async () => {
     const { data, error } = await supabase
       .from('areas_tematicas')
       .select('*')
-      .eq('ativo', true)
+      .eq('ativo', true)  // Corrigido de 'ativa' para 'ativo'
       .order('nome');
 
     if (error) {

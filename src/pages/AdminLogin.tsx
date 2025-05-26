@@ -13,7 +13,7 @@ import AdminDebug from '@/components/admin/AdminDebug';
 const AdminLogin = () => {
   const [credentials, setCredentials] = useState({ email: '', password: '' });
   const [loading, setLoading] = useState(false);
-  const [showDebug, setShowDebug] = useState(true); // Começar com debug visível
+  const [showDebug, setShowDebug] = useState(true);
   const { toast } = useToast();
   const navigate = useNavigate();
   const { setAdminUser, isAdminAuthenticated } = useAdminAuth();
@@ -29,63 +29,43 @@ const AdminLogin = () => {
     e.preventDefault();
     setLoading(true);
 
-    console.log('=== INÍCIO DO LOGIN ===');
+    console.log('=== INÍCIO DO LOGIN SEGURO ===');
     console.log('Tentando fazer login com:', credentials.email);
-    console.log('Senha fornecida (comprimento):', credentials.password.length);
 
     try {
-      // Buscar admin diretamente da tabela
-      const { data: adminUsers, error } = await supabase
-        .from('admin_users')
-        .select('*')
-        .eq('email', credentials.email)
-        .eq('ativo', true);
+      // Chamar função Edge segura para validação
+      const { data, error } = await supabase.functions.invoke('validate-admin-login', {
+        body: {
+          email: credentials.email,
+          password: credentials.password
+        }
+      });
 
-      console.log('Admins encontrados:', adminUsers);
+      console.log('Resposta da função:', data);
       console.log('Erro (se houver):', error);
 
       if (error) {
-        console.error('Erro na consulta:', error);
-        throw error;
+        throw new Error(error.message || 'Erro na validação');
       }
 
-      if (adminUsers && adminUsers.length > 0) {
-        const adminRecord = adminUsers[0];
-        console.log('Registro do admin retornado:', adminRecord);
+      if (data?.success && data?.admin) {
+        console.log('Login bem-sucedido! Dados do admin:', data.admin);
 
-        // Verificar senha (assumindo hash simples por enquanto)
-        if (adminRecord.password_hash === credentials.password) {
-          const adminData = {
-            id: adminRecord.id,
-            email: adminRecord.email,
-            nome: adminRecord.nome,
-            loginTime: new Date().toISOString()
-          };
+        // Armazenar dados do admin no localStorage e contexto
+        localStorage.setItem('admin_session', JSON.stringify(data.admin));
+        setAdminUser(data.admin);
 
-          console.log('Login bem-sucedido! Dados do admin:', adminData);
-
-          // Armazenar dados do admin no localStorage e contexto
-          localStorage.setItem('admin_session', JSON.stringify(adminData));
-          setAdminUser(adminData);
-
-          toast({
-            title: "Login realizado com sucesso!",
-            description: "Redirecionando para o painel administrativo...",
-          });
-          navigate('/admin/dashboard');
-        } else {
-          console.log('Senha incorreta');
-          throw new Error('Credenciais inválidas - senha incorreta');
-        }
+        toast({
+          title: "Login realizado com sucesso!",
+          description: "Redirecionando para o painel administrativo...",
+        });
+        navigate('/admin/dashboard');
       } else {
-        console.log('Nenhum admin encontrado com este email');
-        throw new Error('Admin não encontrado');
+        throw new Error(data?.error || 'Credenciais inválidas');
       }
     } catch (error: any) {
       console.error('=== ERRO NO LOGIN ===');
-      console.error('Tipo do erro:', typeof error);
       console.error('Erro completo:', error);
-      console.error('Mensagem do erro:', error.message);
       
       toast({
         variant: "destructive",
@@ -140,7 +120,7 @@ const AdminLogin = () => {
                 disabled={loading}
                 className="w-full bg-unespar-blue hover:bg-unespar-blue/90"
               >
-                {loading ? "Entrando..." : "Entrar no Painel"}
+                {loading ? "Validando..." : "Entrar no Painel"}
               </Button>
             </form>
             
@@ -157,10 +137,10 @@ const AdminLogin = () => {
                 {showDebug ? 'Ocultar' : 'Mostrar'} Debug
               </Button>
               
-              {/* Teste rápido */}
               <div className="text-xs text-gray-500 space-y-1 border-t pt-2">
                 <p><strong>Teste:</strong> admin@unespar.edu.br</p>
                 <p><strong>Senha:</strong> admin123</p>
+                <p className="text-green-600">🔒 Login seguro ativado</p>
               </div>
             </div>
           </CardContent>
