@@ -7,10 +7,11 @@ import { fetchAreasTemáticas } from '@/services/areasTemáticasService';
 import { uploadWorkFile } from '@/services/fileUploadService';
 import { createWork, updateWork, updateWorkFileInfo, type WorkData } from '@/services/trabalhoService';
 import { useWorkFormState } from '@/hooks/useWorkFormState';
+import { ExistingWork } from '@/types/work';
 
 interface UseSubmitWorkModalProps {
   open: boolean;
-  existingWork?: any;
+  existingWork?: ExistingWork;
   onSuccess: () => void;
 }
 
@@ -58,7 +59,7 @@ export const useSubmitWorkModal = ({ open, existingWork, onSuccess }: UseSubmitW
         titulo: formData.titulo,
         tipo: formData.tipo as 'resumo_expandido' | 'artigo_completo' | 'relato_experiencia',
         area_tematica_id: formData.area_tematica_id,
-        user_id: user.id, // Usar user_id ao invés de usuario_id
+        user_id: user.id,
         data_submissao: new Date().toISOString(),
         status_avaliacao: 'pendente' as 'pendente' | 'aprovado' | 'rejeitado'
       };

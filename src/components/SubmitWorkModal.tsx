@@ -4,12 +4,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { useSubmitWorkModal } from './submission/useSubmitWorkModal';
 import WorkFormFields from './submission/WorkFormFields';
 import FileUpload from './submission/FileUpload';
+import { ExistingWork } from '@/types/work';
 
 interface SubmitWorkModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess: () => void;
-  existingWork?: any;
+  existingWork?: ExistingWork;
 }
 
 const SubmitWorkModal = ({ open, onOpenChange, onSuccess, existingWork }: SubmitWorkModalProps) => {

@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,13 +7,16 @@ import { Switch } from '@/components/ui/switch';
 import { useAuth } from '@/contexts/AuthContext';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Key, User, Bell, Lock, Trash2 } from 'lucide-react';
+import { useUserSettings } from '@/hooks/useUserSettings';
+import { toast } from 'sonner';
 
 interface UserSettingsModalProps {
   onClose: () => void;
 }
 
 export const UserSettingsModal = ({ onClose }: UserSettingsModalProps) => {
-  const { user, updateUserInfo, logout } = useAuth();
+  const { user, updateUserInfo } = useAuth();
+  const { loading, changePassword, deleteAccount, downloadUserData } = useUserSettings();
   
   const [formData, setFormData] = useState({
     nome: user?.nome || '',
@@ -29,45 +31,75 @@ export const UserSettingsModal = ({ onClose }: UserSettingsModalProps) => {
     twoFactorAuth: false
   });
   
-  const [loading, setLoading] = useState(false);
+  const [personalInfoLoading, setPersonalInfoLoading] = useState(false);
   
   const handleInputChange = (field: string, value: string | boolean) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const handlePersonalInfoSubmit = (e: React.FormEvent) => {
+  const handlePersonalInfoSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
+    setPersonalInfoLoading(true);
     
-    setTimeout(() => {
-      updateUserInfo({
+    try {
+      await updateUserInfo({
         nome: formData.nome,
         cpf: formData.cpf,
         instituicao: formData.instituicao
       });
-      setLoading(false);
-    }, 800);
+      toast.success('Informações pessoais atualizadas com sucesso!');
+    } catch (error) {
+      toast.error('Erro ao atualizar informações pessoais');
+    } finally {
+      setPersonalInfoLoading(false);
+    }
   };
   
-  const handlePasswordChange = (e: React.FormEvent) => {
+  const handlePasswordChange = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
     
-    setTimeout(() => {
-      // Lógica para alterar senha seria implementada aqui
+    if (formData.newPassword !== formData.confirmPassword) {
+      toast.error('As senhas não coincidem');
+      return;
+    }
+
+    if (formData.newPassword.length < 6) {
+      toast.error('A nova senha deve ter pelo menos 6 caracteres');
+      return;
+    }
+
+    try {
+      await changePassword(formData.currentPassword, formData.newPassword);
       setFormData(prev => ({
         ...prev,
         currentPassword: '',
         newPassword: '',
         confirmPassword: ''
       }));
-      setLoading(false);
-    }, 800);
+    } catch (error) {
+      // O erro já é tratado no hook
+    }
   };
   
-  const handleDeleteAccount = () => {
-    // Implementar lógica de deleção de conta
-    logout();
+  const handleDeleteAccount = async () => {
+    try {
+      await deleteAccount();
+      onClose();
+    } catch (error) {
+      // O erro já é tratado no hook
+    }
+  };
+
+  const handleSavePreferences = () => {
+    // Por enquanto, apenas simular a funcionalidade
+    // Em um ambiente real, isso salvaria as preferências no backend
+    localStorage.setItem('userPreferences', JSON.stringify({
+      receiveEmails: formData.receiveEmails,
+      darkMode: formData.darkMode,
+      twoFactorAuth: formData.twoFactorAuth
+    }));
+    
+    toast.success('Preferências salvas com sucesso!');
     onClose();
   };
 
@@ -149,10 +181,10 @@ export const UserSettingsModal = ({ onClose }: UserSettingsModalProps) => {
             </Button>
             <Button
               type="submit"
-              disabled={loading}
+              disabled={personalInfoLoading}
               className="bg-unespar-blue hover:bg-unespar-blue/90"
             >
-              {loading ? "Salvando..." : "Salvar Alterações"}
+              {personalInfoLoading ? "Salvando..." : "Salvar Alterações"}
             </Button>
           </div>
         </form>
@@ -260,10 +292,7 @@ export const UserSettingsModal = ({ onClose }: UserSettingsModalProps) => {
             </Button>
             <Button
               type="button"
-              onClick={() => {
-                // Salvar preferências
-                onClose();
-              }}
+              onClick={handleSavePreferences}
               className="bg-unespar-blue hover:bg-unespar-blue/90"
             >
               Salvar Preferências
@@ -283,9 +312,7 @@ export const UserSettingsModal = ({ onClose }: UserSettingsModalProps) => {
             <Button
               variant="outline"
               className="w-full"
-              onClick={() => {
-                // Implementar download dos dados
-              }}
+              onClick={downloadUserData}
             >
               Baixar Meus Dados
             </Button>
@@ -302,6 +329,7 @@ export const UserSettingsModal = ({ onClose }: UserSettingsModalProps) => {
                 <Button
                   variant="destructive"
                   className="w-full"
+                  disabled={loading}
                 >
                   <Trash2 className="w-4 h-4 mr-2" />
                   Excluir Minha Conta
@@ -320,8 +348,9 @@ export const UserSettingsModal = ({ onClose }: UserSettingsModalProps) => {
                   <AlertDialogAction 
                     onClick={handleDeleteAccount}
                     className="bg-red-500 hover:bg-red-600"
+                    disabled={loading}
                   >
-                    Excluir Permanentemente
+                    {loading ? "Excluindo..." : "Excluir Permanentemente"}
                   </AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>
