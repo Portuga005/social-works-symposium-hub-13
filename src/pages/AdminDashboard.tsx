@@ -14,14 +14,6 @@ const AdminDashboard = () => {
   const { data: stats, isLoading: statsLoading, error: statsError } = useAdminStats();
   const { data: alunos = [], isLoading: alunosLoading, error: alunosError } = useAdminStudents();
 
-  console.log('=== ADMIN DASHBOARD ===');
-  console.log('Stats:', stats);
-  console.log('Stats loading:', statsLoading);
-  console.log('Stats error:', statsError);
-  console.log('Alunos:', alunos);
-  console.log('Alunos loading:', alunosLoading);
-  console.log('Alunos error:', alunosError);
-
   return (
     <div className="min-h-screen bg-gray-50">
       <AdminHeader />

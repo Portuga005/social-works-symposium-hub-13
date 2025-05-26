@@ -4,21 +4,17 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAdminAuth } from '@/contexts/AdminAuthContext';
-import AdminDebug from '@/components/admin/AdminDebug';
 
 const AdminLogin = () => {
   const [credentials, setCredentials] = useState({ email: '', password: '' });
   const [loading, setLoading] = useState(false);
-  const [showDebug, setShowDebug] = useState(true);
-  const { toast } = useToast();
   const navigate = useNavigate();
   const { setAdminUser, isAdminAuthenticated } = useAdminAuth();
 
-  // Redirecionar se já estiver logado
   useEffect(() => {
     if (isAdminAuthenticated) {
       navigate('/admin/dashboard');
@@ -29,11 +25,7 @@ const AdminLogin = () => {
     e.preventDefault();
     setLoading(true);
 
-    console.log('=== INÍCIO DO LOGIN SEGURO ===');
-    console.log('Tentando fazer login com:', credentials.email);
-
     try {
-      // Chamar função Edge segura para validação
       const { data, error } = await supabase.functions.invoke('validate-admin-login', {
         body: {
           email: credentials.email,
@@ -41,46 +33,29 @@ const AdminLogin = () => {
         }
       });
 
-      console.log('Resposta da função:', data);
-      console.log('Erro (se houver):', error);
-
       if (error) {
         throw new Error(error.message || 'Erro na validação');
       }
 
       if (data?.success && data?.admin) {
-        console.log('Login bem-sucedido! Dados do admin:', data.admin);
-
-        // Armazenar dados do admin no localStorage e contexto
         localStorage.setItem('admin_session', JSON.stringify(data.admin));
         setAdminUser(data.admin);
 
-        toast({
-          title: "Login realizado com sucesso!",
-          description: "Redirecionando para o painel administrativo...",
-        });
+        toast.success("Login realizado com sucesso!");
         navigate('/admin/dashboard');
       } else {
         throw new Error(data?.error || 'Credenciais inválidas');
       }
     } catch (error: any) {
-      console.error('=== ERRO NO LOGIN ===');
-      console.error('Erro completo:', error);
-      
-      toast({
-        variant: "destructive",
-        title: "Erro no login",
-        description: error.message || "Credenciais inválidas. Tente novamente.",
-      });
+      toast.error(error.message || "Credenciais inválidas. Tente novamente.");
     } finally {
       setLoading(false);
-      console.log('=== FIM DO LOGIN ===');
     }
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-unespar-blue to-unespar-green flex items-center justify-center p-4">
-      <div className="w-full max-w-md space-y-4">
+      <div className="w-full max-w-md">
         <Card>
           <CardHeader className="text-center">
             <div className="w-16 h-16 bg-unespar-blue rounded-full flex items-center justify-center mx-auto mb-4">
@@ -124,29 +99,13 @@ const AdminLogin = () => {
               </Button>
             </form>
             
-            <div className="mt-6 space-y-2 text-center">
-              <a href="/" className="text-unespar-blue hover:underline text-sm block">
+            <div className="mt-6 text-center">
+              <a href="/" className="text-unespar-blue hover:underline text-sm">
                 ← Voltar ao site principal
               </a>
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={() => setShowDebug(!showDebug)}
-                className="text-xs"
-              >
-                {showDebug ? 'Ocultar' : 'Mostrar'} Debug
-              </Button>
-              
-              <div className="text-xs text-gray-500 space-y-1 border-t pt-2">
-                <p><strong>Teste:</strong> admin@unespar.edu.br</p>
-                <p><strong>Senha:</strong> admin123</p>
-                <p className="text-green-600">🔒 Login seguro ativado</p>
-              </div>
             </div>
           </CardContent>
         </Card>
-        
-        {showDebug && <AdminDebug />}
       </div>
     </div>
   );

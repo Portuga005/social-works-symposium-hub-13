@@ -36,62 +36,34 @@ export const useAdminStudents = () => {
   return useQuery({
     queryKey: ['admin-alunos'],
     queryFn: async (): Promise<Student[]> => {
-      console.log('=== BUSCANDO ALUNOS ADMIN ===');
-      
-      try {
-        // Usar a nova função RPC criada
-        const { data: alunosData, error: alunosError } = await supabase
-          .rpc('get_all_students_for_admin') as { data: StudentData[] | null, error: any };
+      const { data: alunosData, error: alunosError } = await supabase
+        .rpc('get_all_students_for_admin') as { data: StudentData[] | null, error: any };
 
-        if (alunosError) {
-          console.error('Erro ao buscar alunos via RPC:', alunosError);
-          // Se a função RPC não existir, criar dados mock temporários
-          console.log('Usando dados mock temporários');
-          return [
-            {
-              id: '1',
-              nome: 'Usuário Exemplo',
-              cpf: '123.456.***-**',
-              email: 'exemplo@email.com',
-              instituicao: 'Universidade Exemplo',
-              statusTrabalho: 'Não enviado',
-              resultado: '-',
-              trabalho: null
-            }
-          ];
-        }
+      if (alunosError) {
+        throw new Error(`Erro ao buscar alunos: ${alunosError.message}`);
+      }
 
-        if (!alunosData || !Array.isArray(alunosData)) {
-          console.log('Nenhum dado retornado');
-          return [];
-        }
-
-        console.log('Alunos encontrados:', alunosData.length);
-        
-        // Converter os dados para o formato esperado pelo componente
-        const alunosFormatados: Student[] = alunosData.map((aluno) => ({
-          id: aluno.id,
-          nome: aluno.nome,
-          cpf: aluno.cpf,
-          email: aluno.email,
-          instituicao: aluno.instituicao,
-          statusTrabalho: aluno.status_trabalho,
-          resultado: aluno.resultado,
-          trabalho: aluno.trabalho_id ? {
-            id: aluno.trabalho_id,
-            titulo: aluno.trabalho_titulo || '',
-            arquivo_url: aluno.arquivo_url || '',
-            arquivo_nome: aluno.arquivo_nome || ''
-          } : null
-        }));
-
-        return alunosFormatados;
-        
-      } catch (error) {
-        console.error('Erro geral:', error);
-        // Retornar dados vazios em caso de erro
+      if (!alunosData || !Array.isArray(alunosData)) {
         return [];
       }
+
+      const alunosFormatados: Student[] = alunosData.map((aluno) => ({
+        id: aluno.id,
+        nome: aluno.nome,
+        cpf: aluno.cpf,
+        email: aluno.email,
+        instituicao: aluno.instituicao,
+        statusTrabalho: aluno.status_trabalho,
+        resultado: aluno.resultado,
+        trabalho: aluno.trabalho_id ? {
+          id: aluno.trabalho_id,
+          titulo: aluno.trabalho_titulo || '',
+          arquivo_url: aluno.arquivo_url || '',
+          arquivo_nome: aluno.arquivo_nome || ''
+        } : null
+      }));
+
+      return alunosFormatados;
     }
   });
 };
