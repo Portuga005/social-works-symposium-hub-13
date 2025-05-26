@@ -45,7 +45,6 @@ const AdminDebug = () => {
           data: stats,
           error: statsError
         },
-        supabase_url: supabase.supabaseUrl,
         status: 'Conexão estabelecida com sucesso'
       };
 
