@@ -41,21 +41,21 @@ export type Database = {
       }
       areas_tematicas: {
         Row: {
-          ativa: boolean | null
+          ativo: boolean | null
           created_at: string | null
           descricao: string | null
           id: string
           nome: string
         }
         Insert: {
-          ativa?: boolean | null
+          ativo?: boolean | null
           created_at?: string | null
           descricao?: string | null
           id?: string
           nome: string
         }
         Update: {
-          ativa?: boolean | null
+          ativo?: boolean | null
           created_at?: string | null
           descricao?: string | null
           id?: string
