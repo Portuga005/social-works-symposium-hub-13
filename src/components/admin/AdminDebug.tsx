@@ -33,10 +33,8 @@ const AdminDebug = () => {
   const testLogin = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase.rpc('validate_admin_login', {
-        admin_email: 'admin@unespar.edu.br',
-        admin_password: 'admin123'
-      });
+      // Criar função RPC temporária para teste
+      const { data, error } = await supabase.rpc('check_admin_access');
 
       console.log('Resultado do teste de login:', data);
       console.log('Erro (se houver):', error);
@@ -140,7 +138,7 @@ const AdminDebug = () => {
             Verificar Admins
           </Button>
           <Button onClick={testLogin} disabled={loading} variant="outline">
-            Testar Login RPC
+            Testar Access RPC
           </Button>
           <Button onClick={directInsertAdmin} disabled={loading} variant="secondary">
             Criar Admin Direto

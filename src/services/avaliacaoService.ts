@@ -10,47 +10,17 @@ export const submitAvaliacao = async (
   try {
     console.log('Submetendo avaliação:', { trabalhoId, professorId, resultado });
     
-    // Atualizar a avaliação na nova estrutura
-    const { data, error } = await supabase
-      .from('avaliacoes')
-      .update({
-        recomendacao: resultado,
-        comentarios: comentarios || null,
-        updated_at: new Date().toISOString()
-      })
-      .eq('trabalho_id', trabalhoId)
-      .eq('professor_id', professorId);
+    // Usar a função RPC existente
+    const { data, error } = await supabase.rpc('submit_avaliacao', {
+      trabalho_uuid: trabalhoId,
+      professor_uuid: professorId,
+      resultado_avaliacao: resultado,
+      comentarios_texto: comentarios || null
+    });
 
     if (error) {
       console.error('Erro ao submeter avaliação:', error);
       throw error;
-    }
-
-    // Atualizar status do trabalho baseado na avaliação
-    const { error: updateError } = await supabase
-      .from('trabalhos')
-      .update({
-        status_avaliacao: resultado,
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', trabalhoId);
-
-    if (updateError) {
-      console.error('Erro ao atualizar status do trabalho:', updateError);
-      throw updateError;
-    }
-
-    // Atualizar status da distribuição
-    const { error: distribError } = await supabase
-      .from('distribuicao_trabalhos')
-      .update({
-        status: 'concluido'
-      })
-      .eq('trabalho_id', trabalhoId);
-
-    if (distribError) {
-      console.error('Erro ao atualizar distribuição:', distribError);
-      throw distribError;
     }
 
     console.log('Avaliação submetida com sucesso');
@@ -67,7 +37,7 @@ export const getAvaliacaoStatus = async (trabalhoId: string, professorId: string
       .from('avaliacoes')
       .select('recomendacao, comentarios, created_at')
       .eq('trabalho_id', trabalhoId)
-      .eq('professor_id', professorId)
+      .eq('avaliador_id', professorId)
       .maybeSingle();
 
     if (error) {

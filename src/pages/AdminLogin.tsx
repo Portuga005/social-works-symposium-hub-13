@@ -34,26 +34,27 @@ const AdminLogin = () => {
     console.log('Senha fornecida (comprimento):', credentials.password.length);
 
     try {
-      // Usar a função do Supabase para validar login admin
-      const { data, error } = await supabase.rpc('validate_admin_login', {
-        admin_email: credentials.email,
-        admin_password: credentials.password
-      });
+      // Buscar admin diretamente da tabela
+      const { data: adminUsers, error } = await supabase
+        .from('admin_users')
+        .select('*')
+        .eq('email', credentials.email)
+        .eq('ativo', true);
 
-      console.log('Resposta da função validate_admin_login:', data);
-      console.log('Erro da função (se houver):', error);
+      console.log('Admins encontrados:', adminUsers);
+      console.log('Erro (se houver):', error);
 
       if (error) {
-        console.error('Erro na função RPC:', error);
+        console.error('Erro na consulta:', error);
         throw error;
       }
 
-      if (data && data.length > 0) {
-        const adminRecord = data[0];
+      if (adminUsers && adminUsers.length > 0) {
+        const adminRecord = adminUsers[0];
         console.log('Registro do admin retornado:', adminRecord);
-        console.log('Campo valid:', adminRecord.valid);
 
-        if (adminRecord.valid === true) {
+        // Verificar senha (assumindo hash simples por enquanto)
+        if (adminRecord.password_hash === credentials.password) {
           const adminData = {
             id: adminRecord.id,
             email: adminRecord.email,
@@ -73,8 +74,7 @@ const AdminLogin = () => {
           });
           navigate('/admin/dashboard');
         } else {
-          console.log('Credenciais inválidas - valid é false');
-          console.log('Dados completos retornados:', data);
+          console.log('Senha incorreta');
           throw new Error('Credenciais inválidas - senha incorreta');
         }
       } else {

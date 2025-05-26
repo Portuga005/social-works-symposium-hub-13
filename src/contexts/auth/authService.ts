@@ -34,7 +34,7 @@ export const logoutUser = async () => {
 
 export const updateUserProfile = async (user: UserProfile, data: Partial<UserProfile>) => {
   const { error } = await supabase
-    .from('usuarios')
+    .from('profiles')
     .update({
       nome: data.nome,
       cpf: data.cpf,

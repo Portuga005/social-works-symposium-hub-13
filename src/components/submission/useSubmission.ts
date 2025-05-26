@@ -35,7 +35,7 @@ export const useSubmission = () => {
           *,
           areas_tematicas (nome)
         `)
-        .eq('usuario_id', user.id)
+        .eq('user_id', user.id) // Usar user_id ao invés de usuario_id
         .maybeSingle();
 
       if (error) {
@@ -70,12 +70,12 @@ export const useSubmission = () => {
     try {
       console.log('Deletando trabalho:', trabalho.id);
       
-      if (trabalho.arquivo_path) {
-        console.log('Deletando arquivo do storage:', trabalho.arquivo_path);
+      if (trabalho.arquivo_storage_path) {
+        console.log('Deletando arquivo do storage:', trabalho.arquivo_storage_path);
         
         const { error: storageError } = await supabase.storage
           .from('trabalhos')
-          .remove([trabalho.arquivo_path]);
+          .remove([trabalho.arquivo_storage_path]);
 
         if (storageError) {
           console.error('Erro ao deletar arquivo:', storageError);
@@ -88,7 +88,7 @@ export const useSubmission = () => {
         .from('trabalhos')
         .delete()
         .eq('id', trabalho.id)
-        .eq('usuario_id', user.id);
+        .eq('user_id', user.id); // Usar user_id ao invés de usuario_id
 
       if (error) {
         console.error('Erro ao deletar trabalho do banco:', error);
