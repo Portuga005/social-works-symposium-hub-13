@@ -19,6 +19,8 @@ export const useTrabalhosAtribuidos = (professorId: string | null) => {
     queryFn: async (): Promise<TrabalhoAtribuido[]> => {
       if (!professorId) return [];
       
+      console.log('Buscando trabalhos atribuídos para professor:', professorId);
+      
       const { data, error } = await supabase.rpc('get_trabalhos_professor', {
         professor_uuid: professorId
       });
@@ -28,8 +30,10 @@ export const useTrabalhosAtribuidos = (professorId: string | null) => {
         throw error;
       }
 
+      console.log('Trabalhos encontrados:', data?.length || 0);
       return data || [];
     },
     enabled: !!professorId,
+    refetchInterval: 30000, // Atualiza a cada 30 segundos para capturar novos trabalhos distribuídos
   });
 };
