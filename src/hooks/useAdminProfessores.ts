@@ -1,7 +1,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 
 export const useAdminProfessores = () => {
   return useQuery({
@@ -28,7 +28,6 @@ export const useAdminProfessores = () => {
 
 export const useCreateProfessor = () => {
   const queryClient = useQueryClient();
-  const { toast } = useToast();
 
   return useMutation({
     mutationFn: async (professorData: {
@@ -57,25 +56,17 @@ export const useCreateProfessor = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-professores'] });
-      toast({
-        title: "Professor cadastrado",
-        description: "Professor foi cadastrado com sucesso!",
-      });
+      toast.success("Professor foi cadastrado com sucesso!");
     },
     onError: (error) => {
       console.error('Erro na mutation:', error);
-      toast({
-        title: "Erro",
-        description: "Erro ao cadastrar professor. Verifique se o email já não está em uso.",
-        variant: "destructive",
-      });
+      toast.error("Erro ao cadastrar professor. Verifique se o email já não está em uso.");
     }
   });
 };
 
 export const useUpdateProfessorStatus = () => {
   const queryClient = useQueryClient();
-  const { toast } = useToast();
 
   return useMutation({
     mutationFn: async ({ id, ativo }: { id: string; ativo: boolean }) => {
@@ -95,18 +86,11 @@ export const useUpdateProfessorStatus = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-professores'] });
-      toast({
-        title: "Status atualizado",
-        description: "Status do professor foi atualizado com sucesso!",
-      });
+      toast.success("Status do professor foi atualizado com sucesso!");
     },
     onError: (error) => {
       console.error('Erro na mutation:', error);
-      toast({
-        title: "Erro",
-        description: "Erro ao atualizar status do professor.",
-        variant: "destructive",
-      });
+      toast.error("Erro ao atualizar status do professor.");
     }
   });
 };

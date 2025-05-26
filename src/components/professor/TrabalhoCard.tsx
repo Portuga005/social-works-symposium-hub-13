@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -6,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { FileText, Download, CheckCircle, XCircle } from 'lucide-react';
 import { submitAvaliacao } from '@/services/avaliacaoService';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 
 type TrabalhoCardProps = {
@@ -28,7 +27,6 @@ const TrabalhoCard = ({ trabalho, professorId, onAvaliacaoSubmitted }: TrabalhoC
   const [feedback, setFeedback] = useState('');
   const [loading, setLoading] = useState(false);
   const [downloadingFile, setDownloadingFile] = useState(false);
-  const { toast } = useToast();
 
   const handleAvaliacao = async (resultado: 'aprovado' | 'rejeitado') => {
     setLoading(true);
@@ -36,19 +34,12 @@ const TrabalhoCard = ({ trabalho, professorId, onAvaliacaoSubmitted }: TrabalhoC
     try {
       await submitAvaliacao(trabalho.trabalho_id, professorId, resultado, feedback);
       
-      toast({
-        title: `Trabalho ${resultado}!`,
-        description: `A avaliação foi registrada no sistema.`,
-      });
+      toast.success(`Trabalho ${resultado}! A avaliação foi registrada no sistema.`);
       
       setFeedback('');
       onAvaliacaoSubmitted();
     } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "Erro ao avaliar",
-        description: "Não foi possível registrar a avaliação. Tente novamente.",
-      });
+      toast.error("Não foi possível registrar a avaliação. Tente novamente.");
     } finally {
       setLoading(false);
     }
@@ -56,11 +47,7 @@ const TrabalhoCard = ({ trabalho, professorId, onAvaliacaoSubmitted }: TrabalhoC
 
   const handleDownloadFile = async () => {
     if (!trabalho.arquivo_nome) {
-      toast({
-        variant: "destructive",
-        title: "Erro",
-        description: "Arquivo não encontrado.",
-      });
+      toast.error("Arquivo não encontrado.");
       return;
     }
 
@@ -99,18 +86,11 @@ const TrabalhoCard = ({ trabalho, professorId, onAvaliacaoSubmitted }: TrabalhoC
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
 
-      toast({
-        title: "Download iniciado",
-        description: "O arquivo está sendo baixado.",
-      });
+      toast.success("O arquivo está sendo baixado.");
 
     } catch (error: any) {
       console.error('Error downloading file:', error);
-      toast({
-        variant: "destructive",
-        title: "Erro ao baixar arquivo",
-        description: error.message || "Não foi possível baixar o arquivo.",
-      });
+      toast.error(error.message || "Não foi possível baixar o arquivo.");
     } finally {
       setDownloadingFile(false);
     }
